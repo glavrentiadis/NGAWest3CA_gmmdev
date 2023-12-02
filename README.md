@@ -19,7 +19,7 @@ To install the shared R kernel, which includes all common packages for GMM devel
 * Lunch the Terminal from the Other subcategory
 * Activate shared conda environment: `conda activate /home/jupyter/projects/PRJ-4291/conda_env`
 * Lunch R: `R`
-* Install IRkernel: `IRkernel::installspec(name='gmm_env_R', displayname='gmm_env_R')`
+* Install IRkernel: `IRkernel::installspec(name='gmm_env_r', displayname='gmm_env_R')`
 * Restart Jupyter Lab on Desing-Safe; the R_gmm_env_shared kernel should appear in the list of available kernels.
 
 ## Troubleshooting
