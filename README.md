@@ -1,11 +1,11 @@
 # NGA3CA Ground Motion Model Development <br> (Dr. Abrahamson's group)
 This repository contains the files used in the development of Abrahamson's group ergodic and non-ergodic ground motion models as part of the Next Generation Attenuation 3 project.
 
-# Table of Contents
+## Table of Contents
 1. [Instructions](#instructions)
 2. [Troubleshooting](#troubleshooting)
 
-# Instructions
+## Instructions
 ### Installation of Jupyter Python and R  Kernel 
 Note the following instructions require that you have access to the shared Desing Safe Project (PRJ-4291)
 
