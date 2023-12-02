@@ -1,8 +1,11 @@
 # NGA3CA Ground Motion Model Development <br> (Dr. Abrahamson's group)
 This repository contains the files used in the development of Abrahamson's group ergodic and non-ergodic ground motion models as part of the Next Generation Attenuation 3 project.
 
+# Table of Contents
+1. [Instructions](#instructions)
+2. [Troubleshooting](#troubleshooting)
 
-## Instructions
+# Instructions
 ### Installation of Jupyter Python and R  Kernel 
 Note the following instructions require that you have access to the shared Desing Safe Project (PRJ-4291)
 
@@ -22,7 +25,7 @@ To install the shared R kernel, which includes all common packages for GMM devel
 * Install IRkernel: `IRkernel::installspec(name='gmm_env_r', displayname='gmm_env_R')`
 * Restart Jupyter Lab on Desing-Safe; the R_gmm_env_shared kernel should appear in the list of available kernels.
 
-## Troubleshooting
+# Troubleshooting
 The inventory below contains a list of commonly encountered issues organized by the type of problem.
 
 ##### Missing packages or Syntax error
