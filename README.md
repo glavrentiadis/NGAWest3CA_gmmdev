@@ -23,4 +23,10 @@ To install the shared R kernel, which includes all common packages for GMM devel
 * Restart Jupyter Lab on Desing-Safe; the R_gmm_env_shared kernel should appear in the list of available kernels.
 
 ## Troubleshooting
- 
+The inventory below contains a list of commonly encountered issues organized by the type of problem.
+
+##### Missing packages or Syntax error
+ * Ensure the appropriate Kernel has been selected
+   * Go to `Kernel` on the menu bar,
+   * Select `Change Kernel ...` from the drop-down list
+   * Select `gmm_env_R` or `gmm_env_python` on the menu for a R or Python Jupyter notebook, respectively 
