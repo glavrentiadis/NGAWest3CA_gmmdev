@@ -15,6 +15,7 @@ To install the shared ipython kernel, which includes all shared libraries
 * Lunch the Terminal from the Other subcategory
 * Activate shared conda environment: `conda activate /home/jupyter/projects/PRJ-4291/conda_env`
 * Install the IPython kernel: <br> `/home/jupyter/projects/PRJ-4291/conda_env/bin/ipython kernel install --user --name=gmm_env_python`
+* Exit Terminal: `exit`
 * Restart Jupyter Lab on Desing-Safe; the python_gmm_env_shared kernel should appear in the list of available kernels.
 #### Jupyter R Kernel
 To install the shared R kernel, which includes all common packages for GMM development (e.g., lmer, ggplot, tidyverse)
@@ -23,6 +24,8 @@ To install the shared R kernel, which includes all common packages for GMM devel
 * Activate shared conda environment: `conda activate /home/jupyter/projects/PRJ-4291/conda_env`
 * Lunch R: `R`
 * Install IRkernel: `IRkernel::installspec(name='gmm_env_r', displayname='gmm_env_R')`
+* Exit R: `q()`
+* Exit Terminal: `exit`
 * Restart Jupyter Lab on Desing-Safe; the R_gmm_env_shared kernel should appear in the list of available kernels.
 
 # Troubleshooting
