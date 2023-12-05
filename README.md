@@ -1,9 +1,39 @@
 # NGA West 3 CA Ground Motion Model Development <br> (Dr. Abrahamson's group)
-This repository contains the files used in the development of Abrahamson's group ergodic and non-ergodic ground motion models as part of the Next Generation Attenuation 3 project.
+This repository contains the files used in the development of Abrahamson's group ergodic and non-ergodic ground motion models as part of the Next Generation Attenuation West 3 project.
 
 ## Table of Contents
-1. [Instructions](#instructions)
-2. [Troubleshooting](#troubleshooting)
+1. [Repository Structure](#repository-structure)
+2. [Instructions](#instructions)
+3. [Troubleshooting](#troubleshooting)
+
+## Repository Structure
+    .
+    ├── Analyses                   (regression scripts)
+    │    ├── gmm_ergodic           (scripts related to the ergodic gmm development)
+    │    │    ├── preprocessing    (preprocessing of raw input files)
+    |    |    ├── regression
+    |    |    └── comparisons
+    |    ├── gmm_nonergodic
+    │    │    ├── preprocessing
+    |    |    ├── regression
+    |    |    └── comparisons
+    |    ├── julia_lib
+    |    ├── matlab_lib
+    |    ├── python_lib
+    |    └── r_lib
+    |
+    ├── Data                       (output files)
+    │    ├── gmm_ergodic
+    |
+    ├── Raw_files                  (input files in original format)
+    ├── Meetings                   (group meeting material)
+    ├── Reporting                  (publications' folder)
+    ├── conda_env                  (shared python/r conda environment for gmm development)
+    ├── .git 
+    |
+    ├── README.md 
+    ├── LICENSE 
+    └── .gitignore                       
 
 ## Instructions
 ### Installation of Jupyter Python and R  Kernel 
