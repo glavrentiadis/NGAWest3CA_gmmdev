@@ -1,4 +1,4 @@
-# NGA3CA Ground Motion Model Development <br> (Dr. Abrahamson's group)
+# NGA West 3 CA Ground Motion Model Development <br> (Dr. Abrahamson's group)
 This repository contains the files used in the development of Abrahamson's group ergodic and non-ergodic ground motion models as part of the Next Generation Attenuation 3 project.
 
 ## Table of Contents
