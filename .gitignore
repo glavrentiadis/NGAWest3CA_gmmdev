@@ -1,0 +1,14 @@
+# Files to ignore it Git
+#----------------------------
+#Python generated folders
+__pycache__
+
+#Jupyer Notebook
+.ipynb_checkpoints
+
+#Matlab
+*.asv
+
+#STAN compiled files
+*.hpp
+
