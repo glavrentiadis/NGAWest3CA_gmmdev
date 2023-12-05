@@ -7,33 +7,34 @@ This repository contains the files used in the development of Abrahamson's group
 3. [Troubleshooting](#troubleshooting)
 
 ## Repository Structure
-    .
-    ├── Analyses                   (regression scripts)
-    │    ├── gmm_ergodic           (scripts related to the ergodic gmm development)
-    │    │    ├── preprocessing    (preprocessing of raw input files)
-    |    |    ├── regression
-    |    |    └── comparisons
-    |    ├── gmm_nonergodic
-    │    │    ├── preprocessing
-    |    |    ├── regression
-    |    |    └── comparisons
-    |    ├── julia_lib
-    |    ├── matlab_lib
-    |    ├── python_lib
-    |    └── r_lib
-    |
-    ├── Data                       (output files)
-    │    ├── gmm_ergodic
-    |
-    ├── Raw_files                  (input files in original format)
-    ├── Meetings                   (group meeting material)
-    ├── Reporting                  (publications' folder)
-    ├── conda_env                  (shared python/r conda environment for gmm development)
-    ├── .git 
-    |
-    ├── README.md 
-    ├── LICENSE 
-    └── .gitignore                       
+    PRJ-4291                        (Design-Safe project)
+     |
+     ├── Analyses                   (regression scripts)
+     │    ├── gmm_ergodic           (scripts related to the ergodic gmm development)
+     │    │    ├── preprocessing    (preprocessing of raw input files)
+     |    |    ├── regression
+     |    |    └── comparisons
+     |    ├── gmm_nonergodic
+     │    │    ├── preprocessing
+     |    |    ├── regression
+     |    |    └── comparisons
+     |    ├── julia_lib
+     |    ├── matlab_lib
+     |    ├── python_lib
+     |    └── r_lib
+     |
+     ├── Data                       (output files)
+     │    ├── gmm_ergodic
+     |
+     ├── Raw_files                  (input files in original format)
+     ├── Meetings                   (group meeting material)
+     ├── Reporting                  (publications' folder)
+     ├── conda_env                  (shared python/r conda environment for gmm development)
+     ├── .git 
+     |
+     ├── README.md 
+     ├── LICENSE 
+     └── .gitignore                       
 
 ## Instructions
 ### Installation of Jupyter Python and R  Kernel 
