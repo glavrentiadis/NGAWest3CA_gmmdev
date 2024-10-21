@@ -6,7 +6,7 @@
 
 #libraries
 library(sp)
-library(rgdal)
+#library(rgdal)
 
 #Anonymous functions
 and.array      <- function (...)  Reduce("&", list(...))
@@ -71,3 +71,11 @@ UniqueIdxInv <- function(data_array){
   #return output
   return(list(unq=data_unq, idx=data_unq_idx, inv=data_unq_inv))
 }
+
+#piecewise scaling
+piecewise_scl <- function(x, xlim1, xlim2, ylim1, ylim2){
+    #evalute piecewise linear function 
+    y <- approx(x=c(xlim1,xlim2), y=c(ylim1, ylim2), yleft=ylim1, yright=ylim2, xout=x, method="linear")$y        
+    return(y)    
+}
+
