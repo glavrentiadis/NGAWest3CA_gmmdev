@@ -393,6 +393,6 @@ df_flatfile.to_csv(dir_out+fn_df_scl+'.csv', index=False)
 
 #dataframes with random realizations
 for l in range(n_realiz):
-    fn_df_rlz = 'fltfile_rlz_%i'%(l+1)
+    fn_df_rlz = 'fltfile_rlz%i'%(l+1)
     df_realiz_all[l].to_csv(dir_out+fn_df_rlz+'.csv', index=False)
 

@@ -9,7 +9,9 @@ Created on Thu Oct  3 07:43:06 2024
 #general
 import os
 import sys
+import shutil
 import pathlib
+import platform
 #string libraries
 import re
 #arithmetic libraries
@@ -47,11 +49,19 @@ def get_posterior(param_samples, quantile=[0.05,0.16,0.84,0.95]):
     #return posterior metrics
     return param_mean, param_median, param_sd, param_perc
 
+
 #%% Define Variables
 ### ======================================
+#computer name
+machine_name = platform.node().lower()
+if bool(re.match('.*.cm.cluster', machine_name)):
+    machine_name = 'caltech.cluster'
+#replace dots with dashes
+machine_name = machine_name.replace('.','_')
+
 #response variable
-freq = 5.011872
-n_y  = 'eas_f%.9fhz'%freq
+freq = float(os.getenv('FREQ')) if not os.getenv('FREQ')   is None else 5.011872
+n_y  = os.getenv('NAME_Y')      if not os.getenv('NAME_Y') is None else 'eas_f%.9fhz'%freq
 
 #region filter
 # reg2process = ('ALL')
@@ -63,6 +73,8 @@ ztor_max = 20
 #scaling path term
 scl_atten = 0.01
 scl_dBP   = 0.01
+#rupture offset for dBP
+rrup_offset = 50.
 
 #max rupture distnace
 rrup_max = 300
@@ -75,25 +87,32 @@ n_iter = 200000
 #chain iterations
 # n_iter_warmup   = 20000
 # n_iter_sampling = 10000
-n_iter_warmup   = 250
-n_iter_sampling = 250
-# n_iter_warmup   = 50
-# n_iter_sampling = 50
+# n_iter_warmup   = 250
+# n_iter_sampling = 250
+# n_iter_warmup   = 150
+# n_iter_sampling = 150
+n_iter_warmup   = 50
+n_iter_sampling = 50
 # n_iter_warmup   = 10
 # n_iter_sampling = 10
 #parameters
 n_chains        = 6
 adapt_delta     = 0.8
 max_treedepth   = 14
+#multi-treading
+flag_mthread = True
+threads_chain = 4
 
 #flag production
-flag_production = True
+flag_production = bool(int(os.getenv('FLAG_PROD'))) if not os.getenv('FLAG_PROD') is None else True
+#random realization
+verif_rlz = int(os.getenv('VERIF_RLZ')) if not os.getenv('VERIF_RLZ') is None else 1
 
 #flag heteroscedasticity
-flag_heteroscedastic = True
+flag_heteroscedastic = bool(int(os.getenv('FLAG_HETERO'))) if not os.getenv('FLAG_HETERO') is None else True
 
-#
-flag_upd_gs = True
+#flag updated geometrical spreading
+flag_upd_gs = bool(int(os.getenv('FLAG_UPD_GS'))) if not os.getenv('FLAG_UPD_GS') is None else True
 
 #flag prior sensitivity
 if flag_production: 
@@ -105,29 +124,38 @@ else:
 if flag_production:
     fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240920_all.csv'
 else:
-    fn_fltfile = '../../../Data/gmm_ergodic/verification/dataset/homoscedastic/fltfile_rlz_1.csv'
-    fn_fltfile = '../../../Data/gmm_ergodic/verification/dataset/heteroscedastic/fltfile_rlz_1.csv'
+    fn_fltfile  = '../../../Data/gmm_ergodic/verification/dataset/'
+    fn_fltfile += 'updated_gs/' if flag_upd_gs else 'original_gs/'
+    fn_fltfile += 'heteroscedastic/' if flag_heteroscedastic else 'homoscedastic/'
+    fn_fltfile += 'fltfile_rlz%i.csv'%verif_rlz 
 
 #filename coefficients prior
 if flag_upd_gs:
     #filename updated gmm coefficients
-    fn_upd_coeffs = '../../../Raw_files/coeff_20241021_mod.csv'
+    fn_coeffs_prior = '../../../Raw_files/coeff_20241021_mod2.csv'
 else:
     #filename BA18 coefficients
-    fn_priorcoeffs = '../../../Raw_files/BA18coefs_mod.csv'
+    fn_coeffs_prior = '../../../Raw_files/BA18coefs_mod.csv'
 
 #stan model
-fname_stan_model = '../../stan_lib/'
+dir_stan_model = '../../stan_lib/'
+dir_stan_cmpl  = dir_stan_model  + 'compiled/%s/'%machine_name
 if flag_upd_gs:
     if not flag_heteroscedastic:
-        fname_stan_model += 'regression_gmm_glob_regionalized_homoscedastic_upd_saturation_full_prior.stan'
+        if not flag_mthread:
+            fname_stan_model = 'regression_gmm_glob_regionalized_homoscedastic_upd_saturation_full_prior'
+        else:
+            fname_stan_model = 'regression_gmm_glob_regionalized_homoscedastic_upd_saturation_full_prior_mthread'
     else:
-        fname_stan_model += 'regression_gmm_glob_regionalized_heteroscedastic_upd_saturation_full_prior.stan'
+        if not flag_mthread:
+            fname_stan_model = 'regression_gmm_glob_regionalized_heteroscedastic_upd_saturation_full_prior'
+        else:
+            fname_stan_model = 'regression_gmm_glob_regionalized_heteroscedastic_upd_saturation_full_prior_mthread'
 else:
     if not flag_heteroscedastic:
-        fname_stan_model += 'regression_gmm_glob_regionalized_homoscedastic_full_prior.stan'
+        fname_stan_model = 'regression_gmm_glob_regionalized_homoscedastic_full_prior'
     else:
-        fname_stan_model += 'regression_gmm_glob_regionalized_heteroscedastic_full_prior.stan'
+        fname_stan_model = 'regression_gmm_glob_regionalized_heteroscedastic_full_prior'
 
 #define file output name
 fname_out_main = 'eas_f%.4fhz'%freq
@@ -142,12 +170,13 @@ else:
     else:
         dir_out += 'original_gs/'
     if not flag_heteroscedastic:
-        dir_out += 'homoscedastic_rlz1/'
+        dir_out += 'homoscedastic_rlz%i/'%verif_rlz 
     else:
-        dir_out += 'heteroscedastic_rlz1/'
+        dir_out += 'heteroscedastic_rlz%i/'%verif_rlz 
 
 #figures output
-dir_fig = dir_out + 'figures/'
+dir_fig = dir_out + 'figures/%s/'%fname_out_main
+
 
 #%% Read 
 ### ======================================
@@ -165,9 +194,8 @@ df_flatfile = df_flatfile.loc[df_flatfile.rrup <= rrup_max,:]
 df_flatfile.reset_index(drop=False, inplace=True)
 
 #read BA18 coefficients
-df_coeffs_prior = pd.read_csv(fn_priorcoeffs)
-#read updated coefficients
-df_upd_coeffs  = pd.read_csv(fn_upd_coeffs)
+df_coeffs_prior = pd.read_csv(fn_coeffs_prior)
+
 
 #%% Processing Variables
 ### ======================================
@@ -241,52 +269,56 @@ y = np.log(df_flatfile.loc[:,n_y].values)
 #create output directory
 pathlib.Path(dir_out).mkdir(parents=True, exist_ok=True) 
 pathlib.Path(dir_fig).mkdir(parents=True, exist_ok=True) 
+pathlib.Path(dir_stan_cmpl).mkdir(parents=True, exist_ok=True) 
 
 # regression input data
 # ---   ---   ---   ---
 #prepare regression data
-stan_data = {'N':         n_gm,
-             'NEQ':       n_eq,
-             'NST':       n_st,
-             'NREG':      n_reg,
-             'eq':        eq_id,                  #earthquake id
-             'st':        st_id,                  #station id
-             'reg':       reg_id,
-             'regeq':     regeq_id,
-             'regst':     regst_id,
-             'mag':       mag[eq_idx],
-             'ztor':      ztor[eq_idx],
-             'sof':       sof[eq_idx],
-             'rrup':      rrup,
-             'vs30':      vs30[st_idx],
-             'Y':         y,
+stan_data = {'N':           n_gm,
+             'NEQ':         n_eq,
+             'NST':         n_st,
+             'NREG':        n_reg,
+             'eq':          eq_id,                  #earthquake id
+             'st':          st_id,                  #station id
+             'reg':         reg_id.flatten(),
+             'regeq':       regeq_id.flatten(),
+             'regst':       regst_id.flatten(),
+             'mag':         mag[eq_idx],
+             'ztor':        ztor[eq_idx],
+             'sof':         sof[eq_idx],
+             'rrup':        rrup,
+             'vs30':        vs30[st_idx],
+             'Y':           y,
              #coefficient prior
-             'c_1mu':     c1_prior,
-             'c_3mu':     c3_prior,
-             'c_4mu':     c4_prior,
-             'c_7mu':     c7_prior,
-             'c_8mu':     c8_prior,
-             'c_9mu':     c9_prior,
-             'c_10amu':   c10a_prior,
-             'c_10bmu':   c10b_prior,
+             'c_1mu':       c1_prior,
+             'c_3mu':       c3_prior,
+             'c_4mu':       c4_prior,
+             'c_7mu':       c7_prior,
+             'c_8mu':       c8_prior,
+             'c_9mu':       c9_prior,
+             'c_10amu':     c10a_prior,
+             'c_10bmu':     c10b_prior,
              #short distance saturation
-             'c_2fxd':    c2_fxd,
-             'c_5fxd':    c5_fxd,
-             'c_6fxd':    c6_fxd,
+             'c_2fxd':      c2_fxd,
+             'c_5fxd':      c5_fxd,
+             'c_6fxd':      c6_fxd,
              #mag break
-             'c_nfxd':    cn_fxd,
-             'c_hmfxd':   chm_fxd,
-             'c_magfxd':  cmag_fxd,
+             'c_nfxd':      cn_fxd,
+             'c_hmfxd':     chm_fxd,
+             'c_magfxd':    cmag_fxd,
              #maximum top of rupture
-             'ztor_max':  ztor_max,
+             'ztor_max':    ztor_max,
              #scaling 
-             'scl_atten': scl_atten, #anelastic attenuation
-             'scl_dBP':   scl_dBP,   #between event aleat
+             'scl_atten':   scl_atten, #anelastic attenuation
+             'scl_dBP':     scl_dBP,   #between event aleat
+             'rrup_offset': rrup_offset,
              #aleatory mag breaks
-             's_1mag':    s1m,
-             's_2mag':    s2m,
-             's_5mag':    s5m,
-             's_6mag':    s6m
+             's_1mag':      s1m,
+             's_2mag':      s2m,
+             's_5mag':      s5m,
+             's_6mag':      s6m,
+             #multi-tread 
+             'grainsize': 1
             }
 
 #write as json file
@@ -299,14 +331,32 @@ except AttributeError:
 # run stan
 # ---   ---   ---   ---
 #compile stan model
-stan_model = cmdstanpy.CmdStanModel(stan_file=fname_stan_model) 
-stan_model.compile(force=True)
+if not flag_mthread:
+    stan_model = cmdstanpy.CmdStanModel(stan_file=dir_stan_model+fname_stan_model+'.stan', compile=True)
+elif flag_mthread:
+    cmdstanpy.set_cmdstan_path(os.path.join(os.getenv("HOME"),'.cmdstan/cmdstan-2.35.0-MT/'))
+    stan_model = cmdstanpy.CmdStanModel(stan_file=dir_stan_model+fname_stan_model+'.stan', 
+                                        compile=True, cpp_options={'STAN_THREADS': 'TRUE'})
+#move to compiled dir
+shutil.move(dir_stan_model+fname_stan_model, dir_stan_cmpl+fname_stan_model)
+#delete header file
+os.remove(dir_stan_model+fname_stan_model+'.hpp')
+#link file in new location
+stan_model = cmdstanpy.CmdStanModel(stan_file=dir_stan_model+fname_stan_model+'.stan',
+                                    exe_file=dir_stan_cmpl+fname_stan_model) 
+
 if flag_mcmc:
     #run full MCMC sampler
-    stan_fit = stan_model.sample(data=fname_stan_data, chains=n_chains, 
-                                 iter_warmup=n_iter_warmup, iter_sampling=n_iter_sampling,
-                                 seed=1, refresh=10, max_treedepth=max_treedepth, adapt_delta=adapt_delta,
-                                 show_progress=True,  show_console=True, output_dir=dir_out+'stan_fit/')
+    if not flag_mthread:
+        stan_fit = stan_model.sample(data=fname_stan_data, chains=n_chains, 
+                                     iter_warmup=n_iter_warmup, iter_sampling=n_iter_sampling,
+                                     seed=1, refresh=10, max_treedepth=max_treedepth, adapt_delta=adapt_delta,
+                                     show_progress=True,  show_console=True, output_dir=dir_out+'stan_fit/')
+    elif flag_mthread:
+        stan_fit = stan_model.sample(data=fname_stan_data, chains=n_chains, threads_per_chain=threads_chain,
+                                     iter_warmup=n_iter_warmup, iter_sampling=n_iter_sampling,
+                                     seed=1, refresh=10, max_treedepth=max_treedepth, adapt_delta=adapt_delta,
+                                     show_progress=True,  show_console=True, output_dir=dir_out+'stan_mt_fit/')    
 else:
     #run optimization
     stan_fit = stan_model.optimize(data=fname_stan_data,
@@ -315,9 +365,11 @@ else:
 
 #delete json files
 fname_dir = np.array( os.listdir(dir_out) )
-#velocity filenames
-fname_json = fname_dir[ [bool(re.search('\.json$',f_d)) for f_d in fname_dir] ]
+fname_json = fname_dir[ [bool(re.search(r'\.json$',f_d)) for f_d in fname_dir] ]
 for f_j in fname_json: os.remove(dir_out + f_j)
+
+#delete compiled program
+shutil.rmtree(dir_stan_cmpl)
 
 #%% Postprocessing
 ### ======================================
@@ -343,7 +395,8 @@ if flag_mcmc:
     c8_full                                         = stan_fit.stan_variable('c_8')
     c11_full                                        = np.full(n_chains*n_iter_sampling, [0.])
     #regional coefficients
-    c1r_full, c7r_full, c8r_full = [stan_fit.stan_variable(c) for c in ['c_1r','c_7r','c_8r']]
+    # c1r_full, c7r_full, c8r_full = [stan_fit.stan_variable(c) for c in ['c_1r','c_7r','c_8r']]
+    c1r_full, c3r_full, c7r_full, c8r_full = [stan_fit.stan_variable(c) for c in ['c_1r','c_3r','c_7r','c_8r']]
     #magnitude transition
     cn_full, chm_full, cmag_full = [stan_fit.stan_variable(s) for s in ['c_n','c_hm','c_mag']]
     #aleatory variability
@@ -382,6 +435,7 @@ if flag_mcmc:
     c11_mu,  c11_med,  c11_sd,  c11_q  = get_posterior(c11_full)
     #regional coefficients
     c1r_mu,  c1r_med,  c1r_sd,  c1r_q  = get_posterior(c1r_full)
+    c3r_mu,  c3r_med,  c3r_sd,  c3r_q  = get_posterior(c3r_full)
     c7r_mu,  c7r_med,  c7r_sd,  c7r_q  = get_posterior(c7r_full)
     c8r_mu,  c8r_med,  c8r_sd,  c8r_q  = get_posterior(c8r_full)
     #magnitude transition
@@ -417,6 +471,7 @@ else:
     c8_mu                                 = stan_fit.stan_variable('c_8')
     c11_mu                                = 0.
     #regional terms
+    # c1r_mu, c7r_mu, c8r_mu = [stan_fit.stan_variable(c) for c in ['c_1r','c_7r','c_8r']]
     c1r_mu, c7r_mu, c8r_mu = [stan_fit.stan_variable(c) for c in ['c_1r','c_7r','c_8r']]
     #magnitude transition
     cn_mu, chm_mu, cmag_mu = [stan_fit.stan_variable(s) for s in ['c_n','c_hm','c_mag']]
@@ -591,7 +646,7 @@ ax.grid(which='both')
 ax.tick_params(axis='x', labelsize=30)
 ax.tick_params(axis='y', labelsize=30)
 ax.set_ylim([-3, 3])
-ax.set_yticks([-3.,-1.5,0,1.5,3.])
+ax.set_yticks([-3.,-1.5,0.,1.5,3.])
 fig.tight_layout()
 fig.savefig(dir_fig+fname_fig+'.png', bbox_inches='tight')
 
@@ -618,8 +673,10 @@ ax.legend(loc='lower right', fontsize=30, ncols=2)
 ax.grid(which='both')
 ax.tick_params(axis='x', labelsize=30)
 ax.tick_params(axis='y', labelsize=30)
-ax.set_ylim([-3, 3])
-ax.set_yticks([-3.,-1.5,0,1.5,3.])
+# ax.set_ylim([-3, 3])
+# ax.set_yticks([-3.,-1.5,0,1.5,3.])
+ax.set_ylim([-1.5, 1.5])
+ax.set_yticks([-1.5,-0.75,0.,0.75,1.5])
 fig.tight_layout()
 fig.savefig(dir_fig+fname_fig+'.png', bbox_inches='tight')
 
@@ -647,7 +704,7 @@ ax.tick_params(axis='x', labelsize=30)
 ax.tick_params(axis='y', labelsize=30)
 ax.set_xlim([100, 2500])
 ax.set_ylim([-3, 3])
-ax.set_yticks([-3.,-1.5,0,1.5,3.])
+ax.set_yticks([-3.,-1.5,0.,1.5,3.])
 fig.tight_layout()
 fig.savefig(dir_fig+fname_fig+'.png', bbox_inches='tight')
 
@@ -674,8 +731,8 @@ ax[0].legend(loc='lower right', fontsize=30, ncols=2)
 ax[0].grid(which='both')
 ax[0].tick_params(axis='x', labelsize=30)
 ax[0].tick_params(axis='y', labelsize=30)
-# ax[0].set_ylim([-3, 3])
-# ax[0].set_yticks([-3.,-1.5,0,1.5,3.])
+ax[0].set_ylim([-3, 3])
+ax[0].set_yticks([-3.,-1.5,0.,1.5,3.])
 #within-event-site (rrup scaling)
 for j, rid in enumerate(np.unique(df_predict_summary_gm.regid)):
     #region points
@@ -696,8 +753,8 @@ ax[1].set_ylabel(r'$\delta WS$',  fontsize=32)
 ax[1].grid(which='both')
 ax[1].tick_params(axis='x', labelsize=30)
 ax[1].tick_params(axis='y', labelsize=30)
-# ax[1].set_ylim([-3, 3])
-# ax[1].set_yticks([-3.,-1.5,0,1.5,3.])
+ax[1].set_ylim([-3, 3])
+ax[1].set_yticks([-3.,-1.5,0.,1.5,3.])
 #within-event-site (vs30 scaling)
 for j, rid in enumerate(np.unique(df_predict_summary_gm.regid)):
     #region points
@@ -719,8 +776,8 @@ ax[2].grid(which='both')
 ax[2].tick_params(axis='x', labelsize=30)
 ax[2].tick_params(axis='y', labelsize=30)
 ax[2].set_xlim([100, 2500])
-# ax[2].set_ylim([-3, 3])
-# ax[2].set_yticks([-3.,-1.5,0,1.5,3.])
+ax[2].set_ylim([-3, 3])
+ax[2].set_yticks([-3.,-1.5,0.,1.5,3.])
 fig.tight_layout()
 fig.savefig(dir_fig+fname_fig+'.png', bbox_inches='tight')
 
@@ -765,7 +822,7 @@ for j, rid in enumerate(np.unique(df_predict_summary_eq.regid)):
     data2plot = df_predict_summary_eq.loc[i_r,['eqlat','eqlon','deltaBP_mu']].values
     data2plot[:,2] /= scl_dBP
     #plot figure
-    fig, ax, cbar, data_crs, gl = pycplt.PlotScatterCAMap(data2plot, cmin=-3.0, cmax=3.0, flag_grid=False, 
+    fig, ax, cbar, data_crs, gl = pycplt.PlotScatterCAMap(data2plot, cmin=-1.5, cmax=1.5, flag_grid=False, 
                                                           title=None, cbar_label='', log_cbar = False, 
                                                           frmt_clb = '%.2f', alpha_v = 0.7, cmap='seismic', 
                                                           marker_size=70.)
@@ -855,8 +912,10 @@ pathlib.Path(dir_fig).mkdir(parents=True, exist_ok=True)
 
 #create stan trace plots
 stan_az_fit = az.from_cmdstanpy(stan_fit)
-for c_vn, c_n in zip(['c_1','c_2','c_3','c_4','c_7','c_8','c_9','c_10a','c_10b'], 
-                     ['$c_1$','$c_2$','$c_3$','$c_4$','$c_7$','$c_8$','$c_9$','$c_10a$','$c_10b$',]):
+for c_vn, c_n in zip(['c_1','c_2','c_3','c_4','c_7','c_8','c_9','c_10a','c_10b',
+                      's_1','s_2','s_3','s_4','s_5','s_6'], 
+                     ['$c_1$','$c_2$','$c_3$','$c_4$','$c_7$','$c_8$','$c_9$','$c_{10a}$','$c_{10b}$',
+                      '$s_1$','$s_2$','$s_3$','$s_4$','$s_5$','$s_6$']):
     #create trace plot with arviz
     ax = az.plot_trace(stan_az_fit,  var_names=c_vn, figsize=(10,5) ).ravel()
     ax[0].yaxis.set_major_locator(plt_autotick())
