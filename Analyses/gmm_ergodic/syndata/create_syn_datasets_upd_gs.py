@@ -114,8 +114,16 @@ simplefilter(action="ignore", category=pd.errors.PerformanceWarning)
 #heteroscedasticity option
 flag_hetero_sd = True
 #regionaliztion option
-flag_reg_med   = True
-flag_reg_aleat = True
+#median scaling
+flag_reg_intrcp = True
+flag_reg_smag   = True
+flag_reg_atten  = True
+flag_reg_vs30   = True
+#aleatory varibility
+flag_reg_tau0   = True
+flag_reg_tauP   = True
+flag_reg_phiS   = True
+flag_reg_phi0   = True
 #updated short-distance geometrical spreading
 flag_upd_gs = True
 
@@ -127,6 +135,15 @@ n_realiz = 10
 
 #regionaliztion of intercpet
 reg_intrcp_scl = {'PW': 1.00,
+                  'AK': 1.05,
+                  'SEE':1.10, 
+                  'CH': 0.95, 
+                  'JPN':0.80,  
+                  'NZ': 1.15,  
+                  'TWN':0.90}
+
+#regionaliztion of small magnitude scaling
+reg_smag_scl =   {'PW': 1.00,
                   'AK': 1.05,
                   'SEE':1.10, 
                   'CH': 0.95, 
@@ -153,6 +170,14 @@ reg_vs30_scl =   {'PW': 1.00,
                   'TWN':0.90}
 
 #regionaliztion of aleatory variability
+reg_tau0_scl =  {'PW': 1.00,
+                 'AK': 1.05,
+                 'SEE':1.10, 
+                 'CH': 0.95, 
+                 'JPN':0.80,  
+                 'NZ': 1.15,  
+                 'TWN':0.90}
+
 reg_tauP_scl =  {'PW': 1.00,
                  'AK': 1.05,
                  'SEE':1.10, 
@@ -161,7 +186,7 @@ reg_tauP_scl =  {'PW': 1.00,
                  'NZ': 1.15,  
                  'TWN':0.90}
 
-reg_phi_scl =  {'PW': 1.00,
+reg_phi0_scl = {'PW': 1.00,
                 'AK': 1.05,
                 'SEE':1.10, 
                 'CH': 0.95, 
@@ -289,14 +314,10 @@ for j, f in enumerate(df_coeffs.f):
     s6mag = df_coeffs.loc[j,'s6M']
     
     #add regionaliztion in med scaling
-    if flag_reg_med:
-        reg_intrcp = np.array([reg_intrcp_scl[r] for r in reg ])
-        reg_atten  = np.array([reg_atten_scl[r]  for r in reg])
-        reg_vs30   = np.array([reg_vs30_scl[r]   for r in reg])
-    else:
-        reg_atten = np.ones(n_gm)
-        reg_atten = np.ones(n_gm)
-        reg_vs30  = np.ones(n_gm)
+    reg_intrcp = np.array([reg_intrcp_scl[r] for r in reg ]) if flag_reg_intrcp else np.ones(n_gm)
+    reg_smag   = np.array([reg_smag_scl[r]   for r in reg ]) if flag_reg_smag   else np.ones(n_gm)
+    reg_atten  = np.array([reg_atten_scl[r]  for r in reg ]) if flag_reg_atten  else np.ones(n_gm)
+    reg_vs30   = np.array([reg_vs30_scl[r]   for r in reg ]) if flag_reg_vs30   else np.ones(n_gm)
     
     #compute linear scaling terms
     intr, src, path, site, path_adj = gmm_eas_med(mag, ztor, sof, rrup, vs30, z1p0,
@@ -308,7 +329,7 @@ for j, f in enumerate(df_coeffs.f):
     f_intr = c1 * reg_intrcp * intr
     #source scaling
     f_src_lin = c2 * src[0] + c9 * src[2] + c10a * src[3] + c10b * src[4]  
-    f_src     = c2 * src[0] + (c2-c3) * src[1] + c9 * src[2] + c10a * src[3] + c10b * src[4]  
+    f_src     = c2 * src[0] + (c2-c3*reg_smag) * src[1] + c9 * src[2] + c10a * src[3] + c10b * src[4]  
     #path scaling
     f_path    = c4 * path[0] + c7 * reg_atten * path[1] + path_adj
     #site scaling
@@ -319,21 +340,20 @@ for j, f in enumerate(df_coeffs.f):
 
     #compute aleatory variability
     if flag_hetero_sd:
-        tau, tauP, phiS, phi = gmm_eas_sig(mag, s1, s2, s3, s4, s5, s6,
-                                           s1mag, s2mag, s5mag, s6mag)
+        tau0, tauP, phiS, phi0 = gmm_eas_sig(mag, s1, s2, s3, s4, s5, s6,
+                                             s1mag, s2mag, s5mag, s6mag)
 
     else:
-        tau  = np.full(n_gm, s1)
+        tau0 = np.full(n_gm, s1)
         tauP = np.full(n_gm, s3)
         phiS = np.full(n_gm, s4)
-        phi  = np.full(n_gm, s5)
+        phi0 = np.full(n_gm, s5)
 
     #add regional adjustment
-    if flag_reg_aleat:
-        tau  *= 1.
-        tauP *= 1.
-        phiS *= np.array([reg_phiS_scl[r] for r in reg])
-        phi  *= np.array([reg_phi_scl[r]  for r in reg])
+    if flag_reg_tau0: tau0 *= np.array([reg_tau0_scl[r] for r in reg])
+    if flag_reg_tauP: tauP *= np.array([reg_tauP_scl[r] for r in reg])
+    if flag_reg_phiS: phiS *= np.array([reg_phiS_scl[r] for r in reg])
+    if flag_reg_phi0: phi0 *= np.array([reg_phi0_scl[r]  for r in reg])
         
     #store median scaling 
     df_flatfile.loc[:,'f_med_f%.9fhz'%f]     = f_med
@@ -342,13 +362,13 @@ for j, f in enumerate(df_coeffs.f):
     df_flatfile.loc[:,'f_path_f%.9fhz'%f]    = f_path     
     df_flatfile.loc[:,'f_site_f%.9fhz'%f]    = f_site
     #store aleatory std
-    df_flatfile.loc[:,'tau_f%.9fhz'%f]  = tau
+    df_flatfile.loc[:,'tau0_f%.9fhz'%f] = tau0
     df_flatfile.loc[:,'tauP_f%.9fhz'%f] = tauP
     df_flatfile.loc[:,'phiS_f%.9fhz'%f] = phiS
-    df_flatfile.loc[:,'phi_f%.9fhz'%f]  = phi
+    df_flatfile.loc[:,'phi0_f%.9fhz'%f] = phi0
 
     #store aleatory std for rnd sampling
-    aleat_sd['f%.9fhz'%f] = (tau[eq_idx], tauP[eq_idx], phiS[st_idx], phi)    
+    aleat_sd['f%.9fhz'%f] = (tau0[eq_idx], tauP[eq_idx], phiS[st_idx], phi0)    
     
 
 #sample variability
@@ -361,13 +381,13 @@ for l in range(n_realiz):
     #iterate over frequenices
     for j, f in enumerate(df_coeffs.f):
         #aleatory std
-        tau, tauP, phiS, phi = aleat_sd['f%.9fhz'%f]
+        tau0, tauP, phiS, phi0 = aleat_sd['f%.9fhz'%f]
 
         #sample aleatory variablity
-        dB   = np.random.normal(0., tau,  n_eq)[eq_inv]
+        dB   = np.random.normal(0., tau0, n_eq)[eq_inv]
         dBP  = np.random.normal(0., tauP, n_eq)[eq_inv]
         dS   = np.random.normal(0., phiS, n_st)[st_inv]
-        dWS  = np.random.normal(0., phi,  n_gm)
+        dWS  = np.random.normal(0., phi0, n_gm)
         #update unavailable values
         i_gm_nan_f = i_flt_gm_nan[:,np.argmin(np.abs(f-flt_freq))]
         dB[i_gm_nan_f]  = np.nan
