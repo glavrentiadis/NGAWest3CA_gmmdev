@@ -21,8 +21,11 @@ import pandas as pd
 import geopandas as gpd
 #projection libraries
 import pyproj
+#ground motion libraries
+import pygmm
 #user functions
 sys.path.insert(0,'../../python_lib')
+from pylib_gmm import scalingNL, W94sof
 from determine_style_of_faulting import W94sof
 from pylib_clustering import find_indept_clusters
 
@@ -34,10 +37,14 @@ flag_frmt_rev = 2
 #flatfiel filename
 # fn_fltfile = '../../../Raw_files/flatfiles/NGAW3_FAS_Data_Version_1_20240704_OnlyMw.csv'
 # fn_fltfile = '../../../Raw_files/flatfiles/NGAW3_FAS_Data_F_20240920_OnlyMwRmax.csv'
+# fn_fltfile = '../../../Raw_files/flatfiles/NGAW3_FAS_Data_F_20240920_OnlyRmaxRegion.csv'
 fn_fltfile = '../../../Raw_files/flatfiles/NGAW3_FAS_Data_F_20240920_All.csv'
 
 #file name region flatfile
 fn_regions = '../../../Data/gis/regions/regions_global.shp'
+
+#clustering option 
+flag_clusters = True
 
 #regionalization
 reg  = {'PSW':['CA','Oregon','Mexico','New Mexico'], 
@@ -61,8 +68,11 @@ reg_utm_zones = {'PSW':'11N',
                  'NZ': '59S',  
                  'OTH':'36N'}
 
+#vs30 for non-linear effects
+vsref_nl = 800.
+
 #ground motion flatifle
-# fn_gm_flt = 'fltfile_nga3_20240920_cen'
+# fn_gm_flt = 'fltfile_nga3_20240920_censor'
 fn_gm_flt = 'fltfile_nga3_20240920_all'
 
 #output directory
@@ -107,9 +117,10 @@ sta_id   = df_orig_flt['station_id'].values
 
 #create cluster id
 clust_id = np.zeros(n_gm)
-clusters = find_indept_clusters(df_orig_flt[['event_id','station_id']].values)
-for j, clust in enumerate(clusters):
-    clust_id[clust] = j+1
+if flag_clusters:
+    clusters = find_indept_clusters(df_orig_flt[['event_id','station_id']].values)
+    for j, clust in enumerate(clusters):
+        clust_id[clust] = j+1
 
 #srouce
 mag    = df_orig_flt['magnitude'].values
@@ -117,10 +128,13 @@ ztor   = df_orig_flt['ztor'].values
 strike = df_orig_flt['strike'].values
 dip    = df_orig_flt['dip'].values
 rake   = df_orig_flt['rake'].values
+width  = df_orig_flt['fault_width'].values
+area   = df_orig_flt['fault_area'].values
 #determine sof
 sof    = np.array([W94sof(r) for r in rake])
 sofid  = np.array([np.select([s.lower()=='reverse', s.lower()=='sormal'], [1, -1], 0) 
                    for s in sof])
+mech  = np.select([abs(sofid)<0.5, sofid>=0.5, sofid<=-0.5], ['SS','RS','NS'], 'None')
 #mainshock/aftershock 
 eqclass = np.ones(n_gm)
 # eqclass = df_orig_flt['event_type_id'].values
@@ -239,16 +253,41 @@ for j in range(n_gm):
         eqclt_xy[j,:] = utm_proj(eqclt_lon[j], eqclt_lat[j])
         st_xy[j,:]    = utm_proj(st_lon[j], st_lat[j])
 
-
 # ground motions
 # ---   ---   ---   ---
 i_gm = np.array([bool(re.match('^eas.(.*)Hz', c)) for c in df_orig_flt.columns])
 #frequency
 freq = np.array([float(re.findall('^eas.(.*)Hz', c.replace('p','.'))[0]) for c in df_orig_flt.columns[i_gm]])
-cn_freq = ['eas_f%.9fhz'%f for f in freq]
+cn_eas_freq   = ['eas_f%.9fhz'%f for f in freq]
+cn_easln_freq = ['easln_f%.9fhz'%f for f in freq]
 #eas
 eas = df_orig_flt.loc[:,i_gm].values
 eas[eas == -999] = np.nan
+
+# ground motions (without non-linear scaling)
+# ---   ---   ---   ---
+eas_med = np.zeros(eas.shape)
+f_nl  = np.zeros(eas.shape)
+
+#iterate over all scenarios
+for j in range(n_gm):
+    #ground motion scenario
+    gmm_scen = pygmm.Scenario(mag=mag[j], dip=dip[j], mechanism=mech[j], 
+                              width=width[j], depth_tor=ztor[j], 
+                              dist_rup=rrup[j], dist_x=rx[j], dist_y0=ry0[j], dist_jb=rjb[j], 
+                              v_s30=vsref_nl)
+    
+    #define eas gmm
+    gmm_eas = pygmm.BaylessAbrahamson2019(gmm_scen)
+    
+    #compute median ground motions
+    eas_med[j,:] = np.exp( np.interp( np.log(freq), np.log(gmm_eas.freqs),   np.log(gmm_eas.eas)) )
+
+    #non-linear correction factor
+    f_nl[j,:] = scalingNL(vs30[j], freq, eas_med[j,:])
+
+#linearly corrected eas
+eas_lin = eas / np.exp( f_nl )
 
 # Summarize
 # -------------------------------
@@ -291,6 +330,8 @@ df_gm_flt.loc[:,'sofid']     = sofid
 df_gm_flt.loc[:,'strike']    = strike
 df_gm_flt.loc[:,'dip']       = dip
 df_gm_flt.loc[:,'rake']      = rake
+df_gm_flt.loc[:,'width']     = width
+df_gm_flt.loc[:,'area']      = area
 df_gm_flt.loc[:,'eqclass']   = eqclass 
 #path parameters
 df_gm_flt.loc[:,'rrup']      = rrup
@@ -308,7 +349,9 @@ df_gm_flt.loc[:,'z1.0flag']  = z1p0
 df_gm_flt.loc[:,'z2.5flag']  = z2p5
 
 #ground motion
-df_gm_flt.loc[:,cn_freq] = eas
+df_gm_flt.loc[:,cn_eas_freq]   = eas
+#ground motion w/o non-linearity
+df_gm_flt.loc[:,cn_easln_freq] = eas_lin
 
 #remove ground motions on unavailable regions
 i_reg = ~np.isnan(df_gm_flt.regid)
@@ -352,8 +395,4 @@ print(msg)
 f = open(dir_out + fn_gm_flt + '_summary' + '.txt', 'w')
 f.write(msg)    
 f.close()    
-
-
-
-
 
