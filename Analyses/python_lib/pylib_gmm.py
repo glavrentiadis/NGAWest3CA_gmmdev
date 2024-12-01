@@ -56,7 +56,7 @@ def gmm_eas(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     f_intr = np.ones(mag.shape)
     
     #Source Scaling Terms
-    f_src_lin  = mag 
+    f_src_lin  = mag - 6.
     f_src_fc   = 1.0 / cn * np.log(1 + np.exp(cn * (cmag - mag)))
     f_src_ztor = np.minimum(ztor, ztor_max)
     #sof scaling
@@ -74,7 +74,7 @@ def gmm_eas(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     
     #Site Scaling Terms
     #vs30 scaling
-    f_site_vs30 = np.log(np.minimum(vs30, 1000.) / 1000.)
+    f_site_vs30 = np.log(np.minimum(vs30, 1000.) / 800.)
     #z1.0 scaling
     z1p0_ref = calcBA19z1(vs30)
     f_site_z1p0 = np.log((np.minimum(z1p0, 2) + 0.01) / (z1p0_ref + 0.01))
@@ -85,12 +85,13 @@ def gmm_eas(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
         f_site_z1p0_mat[j,j_b] = f_site_z1p0[j]
     
     #Median Ground Motion
+    #Median Ground Motion
+    f_med   = (c1[reg_id] if flag_c1_reg else c1) * f_intr
     #source scaling
-    f_src   = (c1[reg_id] if flag_c1_reg else c1) * f_intr
-    f_src  += c2 * f_src_lin 
+    f_src   = c2 * f_src_lin 
     f_src  += (c2 - (c3[reg_id] if flag_c3_reg else c3)) * f_src_fc 
-    f_src  += c9 * f_src_ztor
-    f_src  += c10a * f_src_n + c10b * f_src_r
+    if abs(c9) > 1e-9: f_src  += c9 * f_src_ztor
+    f_src  += c10a * f_src_r + c10b * f_src_n
     #path scaling
     f_path  = c4 * f_path_gs
     f_path += (c7[reg_id] if flag_c7_reg else c7) * f_path_atten + f_path_adj
@@ -98,7 +99,7 @@ def gmm_eas(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     f_site  = (c8[reg_id] if flag_c8_reg else c8) * f_site_vs30
     f_site += f_site_z1p0_mat @ np.array([c11]).flatten()
     #ground motion
-    f_med = f_src + f_path + f_site
+    f_med += f_src + f_path + f_site
     
     #Aleatory variability
     s1_array = s1[reg_id] if flag_s1_reg else np.full(n_gm, s1) 
@@ -139,7 +140,7 @@ def gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     assert(len(rrup) == n_gm),'Error. Invalid number of rrup values'
     assert(len(vs30) == n_gm),'Error. Invalid number of vs30 values'
     assert(len(reg)  == n_gm),'Error. Invalid number of reg values'
-    
+
     #convert regions to numpy array
     regions = list(regions) if isinstance(regions, type({}.keys())) else regions
     regions = np.array(regions) if type(regions) is list else regions
@@ -167,7 +168,7 @@ def gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     f_intr = np.ones(mag.shape)
     
     #Source Scaling Terms
-    f_src_lin  = mag 
+    f_src_lin  = mag - 6.
     f_src_fc   = 1.0 / cn * np.log(1 + np.exp(cn * (cmag - mag)))
     f_src_ztor = np.minimum(ztor, ztor_max)
     #sof scaling
@@ -185,7 +186,7 @@ def gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     
     #Site Scaling Terms
     #vs30 scaling
-    f_site_vs30 = np.log(np.minimum(vs30, 1000.) / 1000.)
+    f_site_vs30 = np.log(np.minimum(vs30, 1000.) / 800.)
     #z1.0 scaling
     z1p0_ref = calcBA19z1(vs30)
     f_site_z1p0 = np.log((np.minimum(z1p0, 2) + 0.01) / (z1p0_ref + 0.01))
@@ -196,12 +197,12 @@ def gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
         f_site_z1p0_mat[j,j_b] = f_site_z1p0[j]
     
     #Median Ground Motion
+    f_med   = (c1[reg_id] if flag_c1_reg else c1) * f_intr
     #source scaling
-    f_src   = (c1[reg_id] if flag_c1_reg else c1) * f_intr
-    f_src  += c2 * f_src_lin 
+    f_src   = c2 * f_src_lin 
     f_src  += (c2 - (c3[reg_id] if flag_c3_reg else c3)) * f_src_fc 
-    f_src  += c9 * f_src_ztor
-    f_src  += c10a * f_src_n + c10b * f_src_r
+    if abs(c9) > 1e-9: f_src  += c9 * f_src_ztor
+    f_src  += c10a * f_src_r + c10b * f_src_n
     #path scaling
     f_path  = c4 * f_path_gs
     f_path += (c7[reg_id] if flag_c7_reg else c7) * f_path_atten + f_path_adj
@@ -209,7 +210,7 @@ def gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     f_site  = (c8[reg_id] if flag_c8_reg else c8) * f_site_vs30
     f_site += f_site_z1p0_mat @ np.array([c11]).flatten()
     #ground motion
-    f_med = f_src + f_path + f_site
+    f_med += f_src + f_path + f_site
     
     #Aleatory variability
     s1_array = s1[reg_id] if flag_s1_reg else np.full(n_gm, s1) 
@@ -266,13 +267,14 @@ def scalingHW(mag, w, dip, z_tor,
     
     #tapering terms
     #dip tapering
-    t_1  = np.maximum( (90.-dip)/45., 60./45. )
+    t_1  = np.minimum( (90.-dip)/45., 60./45. )
     #mag tapering
     t_2  = 1. + a_2hw * np.maximum(mag-6.5,-1.)
     t_2 -= (1. - a_2hw) * np.minimum( np.maximum((mag-6.5),-1.), .0)**2
     #normal distance tapering
-    t_3  = np.select([r_x < r_1, r_x < r_2],
-                     [h_1 + h_2 * (r_x/r_1) + h_3 * (r_x/r_1)**2, 
+    t_3  = np.select([r_x < 0., r_x < r_1, r_x < r_2],
+                     [0., 
+                      h_1 + h_2 * (r_x/r_1) + h_3 * (r_x/r_1)**2, 
                       1. - (r_x - r_1)/(r_2 - r_1)], 0.)
     #depth to top of rupture tapering
     t_4 = 1. - np.minimum(z_tor, 10)**2/100
