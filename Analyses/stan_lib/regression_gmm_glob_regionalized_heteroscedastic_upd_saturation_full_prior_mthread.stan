@@ -17,7 +17,7 @@ Fixed terms include:
   * short distance saturation
   * magnitude break in mag scaling
   * width of magnitude transition
-  * magnitude for short distance saturation
+  * magnitude scaling for short distance saturation
   * maximum depth to top of rupture
 
 Aleatory variability includes:
@@ -158,7 +158,7 @@ transformed data {
   //vs30 scaling
   vector[NST] f_vs30;
   for (i in 1:NST)
-    f_vs30[i] = log( min([vs30[i], 1000.]) / 1000. );
+    f_vs30[i] = log( min([vs30[i], 1000.]) / 800. );
     
   //between event path scaling
   vector[N] f_dBP = scl_dBP * (rrup - rrup_offset);
@@ -230,7 +230,7 @@ transformed parameters {
   //------------------------------------
   //coefficients
   vector[NREG] c_1r = c_1 * append_row(1., lambda_1r);
-  vector[NREG] c_3r = c_1 * append_row(1., lambda_3r);
+  vector[NREG] c_3r = c_3 * append_row(1., lambda_3r);
   vector[NREG] c_8r = c_8 * append_row(1., lambda_8r);
   //aleatory standard deviations
   vector[NREG] s_1r = s_1 * append_row(1., lambda_tau0r);
@@ -258,7 +258,7 @@ transformed parameters {
   //intercept
   f_med  = c_1r[reg];
   //source scaling
-  f_med  += (c_2 * mag[eq] + 
+  f_med  += (c_2 * (mag[eq] - 6.) + 
             (c_2 - c_3r[reg]) / c_n .* log( 1 + exp(c_n * (c_mag - mag[eq])) ) +
             c_9   * f_ztor[eq] + 
             c_10a * f_r[eq] +
