@@ -12,3 +12,10 @@ __pycache__
 #STAN compiled files
 *.hpp
 
+#SLURM output files
+slurm-*.out
+slurm-*.err
+
+#Apple folder info
+.DS_Store
+._.DS_Store
