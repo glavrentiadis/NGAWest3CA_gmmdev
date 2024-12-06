@@ -163,7 +163,7 @@ data {
   //scale factor for dBP
   real scl_dBP;
   //rupture distance offset
-  real rrup_offset;
+  real rrup_offset_dBP;
 
   //mean parameters
   real c_1mu;
@@ -289,7 +289,7 @@ transformed data {
   //aleatory scaling
   // - - - - - - - - - -
   //between event path scaling
-  vector[N] f_dBP = scl_dBP * (rrup - rrup_offset);
+  vector[N] f_dBP = scl_dBP * (rrup - rrup_offset_dBP);
 }
 
 parameters {
