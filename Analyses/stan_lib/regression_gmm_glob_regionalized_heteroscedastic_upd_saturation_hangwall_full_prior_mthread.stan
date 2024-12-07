@@ -300,8 +300,8 @@ parameters {
   //source scaling
   real c_3;  //small-to-medium mag scaling
   real c_9;
-  real c_10a;
-  real c_10b;
+  real<lower=0.0> c_10a;
+  real<upper=0.0> c_10b;
   real<lower=0.0> c_13;
   //path scaling
   real<lower=-10.0, upper=0.0> c_4;  //geometrical spreading
