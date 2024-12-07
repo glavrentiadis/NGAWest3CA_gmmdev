@@ -37,7 +37,7 @@ source ~/miniconda3/etc/profile.d/conda.sh
 conda activate /central/groups/enceladus/NGAWest3_GMMdev/Analyses/conda_env_gmmdev
 cd /home/glavrent/enceladus/NGAWest3_GMMdev/Analyses/gmm_ergodic/regression/
 # regression
-python regression_erg_gmm_regionalized.py
+stdbuf -oL python regression_erg_gmm_regionalized.py
 
 # echo job info on joblog:
 echo "Job $SLURM_JOB_ID running: $SLURM_JOB_NAME"
