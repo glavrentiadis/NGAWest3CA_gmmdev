@@ -55,7 +55,7 @@ fi
 # run commands
 cd /home/glavrent/enceladus/NGAWest3_GMMdev/Analyses/gmm_ergodic/regression/
 # regression
-python regression_erg_gmm_regionalized.py
+stdbuf -oL python regression_erg_gmm_regionalized.py
 
 # echo job info on joblog:
 echo "Completed GMM Regression (Production)"
