@@ -136,20 +136,23 @@ assert(reg_phi0_scl.keys()  == reg_intrcp_scl.keys()),"Error. Inconsistent keys.
 assert(reg_phiS_scl.keys()  == reg_intrcp_scl.keys()),"Error. Inconsistent keys."
 
 #flatfiel filename
-fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240704_rev1.csv'
-fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240920_all.csv'
-fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240920_censor.csv'
+# fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240704_rev1.csv'
+# fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240920_all.csv'
+# fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240920_censored.csv'
+# fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20241116_censored.csv'
+fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20241205_censored.csv'
 
 #previous GMM coefficients
 if not flag_upd_satur:
     fn_coeffs = '../../../Raw_files/model_coeffs/BA18coefs_mod.csv'
 else:
-    fn_coeffs = '../../../Raw_files/model_coeffs/coeff_20241021_mod2.csv'
+    fn_coeffs = '../../../Raw_files/model_coeffs/coeff_20241021_mod3.csv'
 
 #output directory
 dir_out = '../../../Data/gmm_ergodic/verification/dataset/'
 dir_out += 'updated_saturation/' if flag_upd_satur else 'original_saturation/'
-dir_out += 'heteroscedastic/' if flag_hetero_sd else 'homoscedastic/'
+dir_out += 'heteroscedastic' if flag_hetero_sd else 'homoscedastic'
+dir_out += '_hangwall/' if flag_hw else '/'
 
 
 #%% Read 
@@ -230,7 +233,7 @@ for j, f in enumerate(df_coeffs.f):
     c4   = df_coeffs.loc[j,'c4']
     c7   = df_coeffs.loc[j,'c7']
     c8   = df_coeffs.loc[j,'c8']
-    c9   = df_coeffs.loc[j,'c9']
+    c9   = 0.# df_coeffs.loc[j,'c9']
     c10a = df_coeffs.loc[j,'c10a']
     c10b = df_coeffs.loc[j,'c10b']
     c13  = df_coeffs.loc[j,'c13']
@@ -301,7 +304,7 @@ for j, f in enumerate(df_coeffs.f):
         f_hw = scaling_hw(mag, width, dip, ztor, rjb, rrup, rx, ry)
     else:
         f_hw = np.zeros(n_gm)
-    f_med += f_hw
+    f_med += c13 * f_hw
     
     #store median scaling 
     df_flatfile.loc[:,'f_med_f%.9fhz'%f]     = f_med
@@ -349,7 +352,7 @@ for l in range(n_realiz):
         df_realiz.loc[:,'dS_f%.9fhz'%f]  = dS
         df_realiz.loc[:,'dWS_f%.9fhz'%f] = dWS
         #total aleatory samples
-        df_realiz.loc[:,'dT_f%.9fhz'%f]  = dB + rrup * dBP + dS + dWS
+        df_realiz.loc[:,'dT_f%.9fhz'%f]  = dB + (rrup - 50.) * dBP + dS + dWS
 
         #compute response variables
         df_realiz.loc[:,'eas_f%.9fhz'%f]         = np.exp( df_realiz.loc[:,['f_med_f%.9fhz'%f,'dT_f%.9fhz'%f]].sum(axis=1) )  

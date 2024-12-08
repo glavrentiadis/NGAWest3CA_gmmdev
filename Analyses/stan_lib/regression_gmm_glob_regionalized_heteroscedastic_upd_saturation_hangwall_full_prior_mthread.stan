@@ -16,6 +16,7 @@ Mean scaling includes:
 Fixed terms include:
   * magnitude scaling (large events)
   * short distance saturation
+  * reverse fault scaling (zero)
   * magnitude break in mag scaling
   * width of magnitude transition
   * magnitude scaling for short distance saturation
@@ -373,8 +374,8 @@ model {
   target += normal_lpdf(c_4   | c_4mu,   0.5);
   target += normal_lpdf(c_8   | c_8mu,   0.5);
   target += normal_lpdf(c_9   | c_9mu,   0.01);
-  target += normal_lpdf(c_10b | c_10amu, 0.5);
-  target += normal_lpdf(c_10a | c_10bmu, 0.5);
+  target += normal_lpdf(c_10a | c_10amu, 0.05);
+  target += normal_lpdf(c_10b | c_10bmu, 0.05);
   target += normal_lpdf(c_13  | c_13mu,  0.1);
   //scaled coefficients coefficients
   target += normal_lpdf(c_7_scl | c_7mu_scl, 0.25);
@@ -434,8 +435,8 @@ generated quantities {
   real c_6   = c_6fxd;
   real c_n   = c_nfxd;
   real c_hm  = c_hmfxd;
-  real c_mag = c_magfxd;  
-  
+  real c_mag = c_magfxd;
+
   //original-scale parameters
   //------------------------------------
   //median scaling

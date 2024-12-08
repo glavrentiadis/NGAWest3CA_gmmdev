@@ -25,26 +25,38 @@ import pyproj
 import pygmm
 #user functions
 sys.path.insert(0,'../../python_lib')
-from pylib_gmm import scalingNL, W94sof
+from pylib_gmm import scalingNL
 from determine_style_of_faulting import W94sof
 from pylib_clustering import find_indept_clusters
 
 #%% Define Variables
 ### ======================================
 #format version
-flag_frmt_rev = 2
+flag_frmt_rev = 4
+#censor option
+flag_censor = True
+#clustering option 
+# flag_clusters = True
+flag_clusters = False
 
 #flatfiel filename
 # fn_fltfile = '../../../Raw_files/flatfiles/NGAW3_FAS_Data_Version_1_20240704_OnlyMw.csv'
 # fn_fltfile = '../../../Raw_files/flatfiles/NGAW3_FAS_Data_F_20240920_OnlyMwRmax.csv'
-# fn_fltfile = '../../../Raw_files/flatfiles/NGAW3_FAS_Data_F_20240920_OnlyRmaxRegion.csv'
-fn_fltfile = '../../../Raw_files/flatfiles/NGAW3_FAS_Data_F_20240920_All.csv'
+if flag_censor:
+    # fn_fltfile        = '../../../Raw_files/flatfiles/NGAW3_FAS_Data_F_20240920_OnlyRmaxRegion.csv'
+    # fn_fltfile          = '../../../Raw_files/flatfiles/flatfiles_20241116/NGAW3_FAS_Data_F_20241116_karen.csv'
+    # fn_fltfile          = '../../../Raw_files/flatfiles/flatfiles_20241116/NGAW3_FAS_Data_F_20241116_karen_mod.csv'
+    fn_fltfile          = '../../../Raw_files/flatfiles/flatfiles_20241205/NGAW3_FAS_Data_F_20241116_karen_v2.csv'
+else:
+    # fn_fltfile = '../../../Raw_files/flatfiles//NGAW3_FAS_Data_Version_0_20241116_All2.csv'
+    # fn_fltfile = '../../../Raw_files/flatfiles/flatfiles_20241116/NGAW3_FAS_Data_Version_0_20241116_All2.csv'
+    fn_fltfile = '../../../Raw_files/flatfiles/flatfiles_20241205/NGAW3_FAS_Data_Version_0_20241116_All2_v2.csv'
+
+if flag_frmt_rev == 3:
+    fn_fltfile_metadata = '../../../Raw_files/flatfiles/flatfiles_20241116/NGAW3_FAS_Data_Version_0_20241116_metadata.csv'
 
 #file name region flatfile
 fn_regions = '../../../Data/gis/regions/regions_global.shp'
-
-#clustering option 
-flag_clusters = True
 
 #regionalization
 reg  = {'PSW':['CA','Oregon','Mexico','New Mexico'], 
@@ -72,8 +84,14 @@ reg_utm_zones = {'PSW':'11N',
 vsref_nl = 800.
 
 #ground motion flatifle
-# fn_gm_flt = 'fltfile_nga3_20240920_censor'
-fn_gm_flt = 'fltfile_nga3_20240920_all'
+if flag_censor:
+    # fn_gm_flt = 'fltfile_nga3_20240920_censored'
+    # fn_gm_flt = 'fltfile_nga3_20241116_censored'
+    fn_gm_flt = 'fltfile_nga3_20241205_censored'
+else:
+    # fn_gm_flt = 'fltfile_nga3_20240920_all'
+    fn_gm_flt = 'fltfile_nga3_20241116_all'
+    fn_gm_flt = 'fltfile_nga3_20241205_all'
 
 #output directory
 dir_out = '../../../Data/gmm_ergodic/dataset/'
@@ -81,7 +99,13 @@ dir_out = '../../../Data/gmm_ergodic/dataset/'
 #%% Read 
 ### ======================================
 #read flatfile
-df_orig_flt = pd.read_csv(fn_fltfile)
+df_orig_flt = pd.read_csv(fn_fltfile, na_values=-999)
+#read metadata
+if flag_frmt_rev == 3:
+    df_meta_flt = pd.read_csv(fn_fltfile_metadata)
+    #collect closest point
+    df_orig_flt = pd.merge(df_orig_flt, df_meta_flt[['motion_id','closest_point_latitude','closest_point_longitude','closest_point_depth']], 
+                           left_on='motion_id', right_on='motion_id')
 
 #rename new zeland issues
 df_orig_flt.loc[df_orig_flt.region=='NewZealand','region'] = 'New Zealand'
@@ -111,6 +135,7 @@ n_gm = len(df_orig_flt)
 # -------------------------------
 # gmm parameters
 # ---   ---   ---   ---
+motion_id = df_orig_flt['motion_id'].values
 #event and station ids
 event_id = df_orig_flt['event_id'].values
 sta_id   = df_orig_flt['station_id'].values
@@ -122,7 +147,10 @@ if flag_clusters:
     for j, clust in enumerate(clusters):
         clust_id[clust] = j+1
 
-#srouce
+#event country
+country_name = df_orig_flt['event_country'].values
+
+#source parameters
 mag    = df_orig_flt['magnitude'].values
 ztor   = df_orig_flt['ztor'].values
 strike = df_orig_flt['strike'].values
@@ -130,16 +158,30 @@ dip    = df_orig_flt['dip'].values
 rake   = df_orig_flt['rake'].values
 width  = df_orig_flt['fault_width'].values
 area   = df_orig_flt['fault_area'].values
+
+#set unspecified values to nan
+mag[mag < -800]       = np.nan
+ztor[ztor < -800]     = np.nan
+strike[strike < -800] = np.nan
+dip[dip < -800]       = np.nan
+rake[rake < -800]     = np.nan
+width[width < -800]   = np.nan
+area[area < -800]     = np.nan
+
 #determine sof
-sof    = np.array([W94sof(r) for r in rake])
-sofid  = np.array([np.select([s.lower()=='reverse', s.lower()=='sormal'], [1, -1], 0) 
+if not flag_censor:
+    sof = np.array([W94sof(r) for r in rake])
+else:
+    sof = np.select([df_orig_flt.RN.values==1, df_orig_flt.RV.values==1], ['normal', 'reverse'], 'strike-slip')
+#style of faulting value
+sofid  = np.array([np.select([s.lower()=='reverse', s.lower()=='normal'], [1, -1], 0) 
                    for s in sof])
 mech  = np.select([abs(sofid)<0.5, sofid>=0.5, sofid<=-0.5], ['SS','RS','NS'], 'None')
 #mainshock/aftershock 
 eqclass = np.ones(n_gm)
 # eqclass = df_orig_flt['event_type_id'].values
 
-#path
+#path parameters
 if flag_frmt_rev  == 1:
     rrup = df_orig_flt['rrup'].values
     rjb	 = df_orig_flt['rjb'].values
@@ -154,11 +196,28 @@ elif flag_frmt_rev == 2:
     ry   = df_orig_flt['Ry_m'].values
     ry0  = df_orig_flt['Ry0_m'].values
     ravg = df_orig_flt['Ravg_m'].values
+elif flag_frmt_rev == 3 or flag_frmt_rev == 4:
+    rrup = df_orig_flt['rrup_m'].values
+    rjb	 = df_orig_flt['rjb_m'].values
+    rx   = df_orig_flt['rx_m'].values
+    ry   = df_orig_flt['ry_m'].values
+    ry0  = df_orig_flt['ry0_m'].values
+    ravg = df_orig_flt['ravg_m'].values
 
+#set unspecified values to nan
+rrup[rrup < -800] = np.nan
+ravg[ravg < -800] = np.nan
+rjb[rjb < -800]   = np.nan
+rx[rx < -800]     = np.nan
+ry[ry < -800]     = np.nan
+ry0[ry0 < -800]   = np.nan
 
 #site
 vs30       = df_orig_flt['vs30'].values
 vs30_class = df_orig_flt['Vs30_class'].values
+#set unspecified values to nan
+vs30[vs30 < -800] = np.nan
+
 #z1.0 and z2.5
 if flag_frmt_rev == 1:
     z1p0_mat = df_orig_flt[['z1p0_measured','z1p0_CVMS4','z1p0_CVMS4.26','z1p0_CVMS4.26.M01','z1p0_CVMH15.1','z1p0_SFCVM21.1','z1p0_USGSNCM','z1p0_NIED']].values
@@ -176,7 +235,7 @@ if flag_frmt_rev == 1:
         #select values based on priority order
         z1p0[j] = z1p0_mat[j,np.argwhere(i_z1p0_fnt)[0][0]] if np.any(i_z1p0_fnt) else np.nan
         z2p5[j] = z2p5_mat[j,np.argwhere(i_z2p5_fnt)[0][0]] if np.any(i_z2p5_fnt) else np.nan
-elif flag_frmt_rev == 2:
+elif flag_frmt_rev >= 2:
     z1p0 = np.full(n_gm, np.nan)
     z2p5 = np.full(n_gm, np.nan)
 
@@ -229,14 +288,33 @@ else:
 #event location
 eq_lat    = df_orig_flt['hypocenter_latitude'].values
 eq_lon    = df_orig_flt['hypocenter_longitude'].values
-eq_z      = df_orig_flt['hypocenter_depth'].values
+if   flag_frmt_rev <= 2:
+    eq_z = df_orig_flt['hypocenter_depth'].values
+elif flag_frmt_rev >= 3:
+    eq_z = df_orig_flt['hypo_depth'].values
+
 #event closest point
-eqclt_lat = df_orig_flt['closest_point_latitude'].values
-eqclt_lon = df_orig_flt['closest_point_longitude'].values
-eqclt_z   = df_orig_flt['closest_point_depth'].values
+if   flag_frmt_rev <= 2:
+    eqclt_lat = df_orig_flt['closest_point_latitude'].values
+    eqclt_lon = df_orig_flt['closest_point_longitude'].values
+    eqclt_z   = df_orig_flt['closest_point_depth'].values
+else:
+    eqclt_lat = df_orig_flt['closest_point_latitude'].values
+    eqclt_lon = df_orig_flt['closest_point_longitude'].values
+    eqclt_z   = df_orig_flt['closest_point_depth'].values
 #station location
 st_lat    = df_orig_flt['station_latitude'].values
 st_lon    = df_orig_flt['station_longitude'].values
+
+#set unspecified values to nan
+eq_lat[eq_lat < -800]       = np.nan
+eq_lon[eq_lon < -800]       = np.nan
+eq_z[eq_z < -800]           = np.nan
+eqclt_lat[eqclt_lat < -800] = np.nan
+eqclt_lon[eqclt_lon < -800] = np.nan
+eqclt_z[eqclt_z < -800]     = np.nan
+st_lat[st_lat < -800]       = np.nan
+st_lon[st_lon < -800]       = np.nan
 
 #compute region specific coordinates
 eq_xy    = np.full((n_gm,2), np.nan)
@@ -263,6 +341,7 @@ cn_easln_freq = ['easln_f%.9fhz'%f for f in freq]
 #eas
 eas = df_orig_flt.loc[:,i_gm].values
 eas[eas == -999] = np.nan
+eas[eas < 1e-13] = np.nan
 
 # ground motions (without non-linear scaling)
 # ---   ---   ---   ---
@@ -292,12 +371,14 @@ eas_lin = eas / np.exp( f_nl )
 # Summarize
 # -------------------------------
 #generate processed ground motion flatfile
-df_gm_flt = pd.DataFrame({'eqid':eq_id, 'stid':st_id, 'clstid':clust_id, 
-                          'eventid':event_id, 'staid':sta_id})
+df_gm_flt = pd.DataFrame({'motionid':motion_id, 
+                          'regid':reg_id, 'eqid':eq_id, 'stid':st_id, 'clstid':clust_id, 
+                          'eventid':event_id, 'stationid':sta_id})
 
 #region info
-df_gm_flt.loc[:,'reg']   = reg_name
-df_gm_flt.loc[:,'regid'] = reg_id
+df_gm_flt.loc[:,'reg']     = reg_name
+#country
+df_gm_flt.loc[:,'country'] = country_name
 
 #eq lat/lon
 df_gm_flt.loc[:,'eqlat'] = eq_lat

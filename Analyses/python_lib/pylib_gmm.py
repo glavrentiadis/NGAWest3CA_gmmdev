@@ -25,6 +25,16 @@ def gmm_eas(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
             s1=0.50, s2=0.40, s3=0.002, s4=0.42, s5=0.40, s6=0.45,
             s1mag=4.0, s2mag=6.0, s5mag=4.0, s6mag=6.0):
     
+    #convert numeric input to numpy arrays
+    mag  = mag  if isinstance(mag, (np.ndarray, np.generic) )  else np.array([mag])
+    ztor = ztor if isinstance(ztor, (np.ndarray, np.generic) ) else np.array([ztor])
+    sof  = sof  if isinstance(sof, (np.ndarray, np.generic) )  else np.array([sof])
+    rrup = rrup if isinstance(rrup, (np.ndarray, np.generic) ) else np.array([rrup])
+    vs30 = vs30 if isinstance(vs30, (np.ndarray, np.generic) ) else np.array([vs30])
+    z1p0 = z1p0 if isinstance(z1p0, (np.ndarray, np.generic) ) else np.array([z1p0])
+    #convert region input to list
+    reg  = reg if isinstance(reg, (np.ndarray, np.generic, list) ) else [reg] 
+    
     #number of ground motions
     n_gm = len(mag)
     assert(len(ztor) == n_gm),'Error. Invalid number of ztor values'
@@ -77,7 +87,7 @@ def gmm_eas(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     f_site_vs30 = np.log(np.minimum(vs30, 1000.) / 800.)
     #z1.0 scaling
     z1p0_ref = calcBA19z1(vs30)
-    f_site_z1p0 = np.log((np.minimum(z1p0, 2) + 0.01) / (z1p0_ref + 0.01))
+    f_site_z1p0 = np.log((np.minimum(z1p0, 2) + 0.01) / (z1p0_ref + 0.01)) if not z1p0 is None else np.zeros(n_gm)
     #index z1.0 break
     j_brk_z1p0 = np.array([sum(z1p0_vs30_brk < v)-1 for v in vs30])
     f_site_z1p0_mat = np.zeros( (n_gm, len(z1p0_vs30_brk)) )
@@ -131,7 +141,17 @@ def gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
                 c11=[0.19, 0.12, 0.15, 0.15], z1p0_vs30_brk=[200, 300, 500],
                 cn=1.60, cmag=6.75, chm=3.838, ztor_max=20,
                 s1=0.50, s2=0.40, s3=0.002, s4=0.42, s5=0.40, s6=0.45,
-                s1mag=4.0, s2mag=6.0, s5mag=4.0, s6mag=6.0):
+                s1mag=4.0, s2mag=6.0, s5mag=4.0, s6mag=6.0, flag_z1p0=False):
+    
+    #convert numeric input to numpy arrays
+    mag  = mag  if isinstance(mag, (np.ndarray, np.generic) )  else np.array([mag])
+    ztor = ztor if isinstance(ztor, (np.ndarray, np.generic) ) else np.array([ztor])
+    sof  = sof  if isinstance(sof, (np.ndarray, np.generic) )  else np.array([sof])
+    rrup = rrup if isinstance(rrup, (np.ndarray, np.generic) ) else np.array([rrup])
+    vs30 = vs30 if isinstance(vs30, (np.ndarray, np.generic) ) else np.array([vs30])
+    z1p0 = z1p0 if isinstance(z1p0, (np.ndarray, np.generic) ) else np.array([z1p0])
+    #convert region input to list
+    reg  = reg if isinstance(reg, (np.ndarray, np.generic, list) ) else [reg]
     
     #number of ground motions
     n_gm = len(mag)
@@ -189,12 +209,13 @@ def gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     f_site_vs30 = np.log(np.minimum(vs30, 1000.) / 800.)
     #z1.0 scaling
     z1p0_ref = calcBA19z1(vs30)
-    f_site_z1p0 = np.log((np.minimum(z1p0, 2) + 0.01) / (z1p0_ref + 0.01))
-    #index z1.0 break
-    j_brk_z1p0 = np.array([sum(z1p0_vs30_brk < v)-1 for v in vs30])
-    f_site_z1p0_mat = np.zeros( (n_gm, len(z1p0_vs30_brk)) )
-    for j, j_b in enumerate(j_brk_z1p0):
-        f_site_z1p0_mat[j,j_b] = f_site_z1p0[j]
+    if flag_z1p0:
+        f_site_z1p0 = np.log((np.minimum(z1p0, 2) + 0.01) / (z1p0_ref + 0.01))
+        #index z1.0 break
+        j_brk_z1p0 = np.array([sum(z1p0_vs30_brk < v)-1 for v in vs30])
+        f_site_z1p0_mat = np.zeros( (n_gm, len(z1p0_vs30_brk)) )
+        for j, j_b in enumerate(j_brk_z1p0):
+            f_site_z1p0_mat[j,j_b] = f_site_z1p0[j]
     
     #Median Ground Motion
     f_med   = (c1[reg_id] if flag_c1_reg else c1) * f_intr
@@ -208,7 +229,8 @@ def gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     f_path += (c7[reg_id] if flag_c7_reg else c7) * f_path_atten + f_path_adj
     #site scalign
     f_site  = (c8[reg_id] if flag_c8_reg else c8) * f_site_vs30
-    f_site += f_site_z1p0_mat @ np.array([c11]).flatten()
+    if flag_z1p0:
+        f_site += f_site_z1p0_mat @ np.array([c11]).flatten()
     #ground motion
     f_med += f_src + f_path + f_site
     
@@ -293,7 +315,8 @@ def scalingHW(mag, w, dip, z_tor,
 
 #%% Non-linear scaling
 ### ------------------------------------------
-fn_coeffs_nl = '../../Raw_files/model_coeffs/EAS_N2_2_MODEL_COEFFICIENTS.csv'
+# fn_coeffs_nl = '../../Raw_files/model_coeffs/EAS_N2_2_MODEL_COEFFICIENTS.csv'
+fn_coeffs_nl = '../../Raw_files/nlsite_coeffs/EAS_N2_3_MODEL_COEFFICIENTS.csv'
 df_coeffs_nl = pd.read_csv(os.path.join(dir_file,fn_coeffs_nl))
 
 def scalingNL(Vs30, freq, Ir):

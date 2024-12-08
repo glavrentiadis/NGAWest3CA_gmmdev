@@ -14,6 +14,7 @@ Mean scaling includes:
 Fixed terms include:
   * magnitude scaling (large events)
   * short distance saturation
+  * reverse fault scaling (zero)
   * magnitude break in mag scaling
   * width of magnitude transition
   * magnitude scaling for short distance saturation
@@ -371,8 +372,8 @@ model {
   c_4   ~ normal(c_4mu,   0.5);
   c_8   ~ normal(c_8mu,   0.5);
   c_9   ~ normal(c_9mu,   0.01);
-  c_10b ~ normal(c_10amu, 0.5);
-  c_10a ~ normal(c_10bmu, 0.5);
+  c_10a ~ normal(c_10amu, 0.05);
+  c_10b ~ normal(c_10bmu, 0.05);
   c_13  ~ normal(c_13mu,  0.1);
   //scaled coefficients coefficients
   c_7_scl ~ normal(c_7mu_scl, 0.25);

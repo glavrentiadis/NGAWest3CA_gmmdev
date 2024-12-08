@@ -1,10 +1,10 @@
 #!/bin/bash
-#### resnick_submit_gmm_regression_freq_single_mthread.sh START ####
+#### resnick_submit_gmm_regression_verif_mthread_array_freq_single.sh START ####
 #SBATCH --time=072:00:00                   # walltime
 #SBATCH --nodes=1
 #SBATCH --cpus-per-task=24
 #SBATCH --mem=34G                          # memory 
-#SBATCH --array=0-41                       # batch array
+#SBATCH --array=1-10                       # batch array
 #SBATCH -J "gmm_reg_freq_single_mthread"   # job name
 #SBATCH --mail-user=glavrent@caltech.edu   # email address
 #SBATCH --mail-type=BEGIN
@@ -18,13 +18,15 @@ FREQ_ARRAY=(0.01318257        0.01513562          0.019952621         0.02511887
             10.0000 12.022642 15.135614  16.98244 19.952621 21.877611 25.11886  27.542291 30.19952   35.481334    39.81071)
 
 #variable definition
-export I_FREQ=$SLURM_ARRAY_TASK_ID #frequency index
-export FREQ=${FREQ_ARRAY[$I_FREQ]} #frequency
-export FLAG_PROD=1   		   #production run
-export FLAG_HETERO=1 		   #heteroscedasticity
-export FLAG_UPD_ST=1 		   #updated geometrical spreading (short distance saturation)
-export FLAG_HW=1     		   #include haningwall scaling
-export FLAG_NL=1     		   #include non-linear site scaling
+export I_FREQ=1 			#frequency index
+export FREQ=${FREQ_ARRAY[$I_FREQ]} 	#frequency
+# export FREQ=5.011872               	#frequency
+export FLAG_PROD=0   		   	#verification run
+export VERIF_RLZ=$SLURM_ARRAY_TASK_ID 	#random realization number
+export FLAG_HETERO=1 		   	#heteroscedasticity
+export FLAG_UPD_ST=1 		   	#updated geometrical spreading (short distance saturation)
+export FLAG_HW=1     		   	#include haningwall scaling
+export FLAG_NL=1     		   	#include non-linear site scaling
 
 #MCMC options
 #number of markov chains
@@ -34,7 +36,7 @@ export FLAG_MTHREAD=1
 export THREADS_CHAIN=6
 
 # echo job info on joblog:
-echo "Running GMM Regression (Production)"
+echo "Running GMM Regression (Verification)"
 echo "Job $SLURM_JOB_ID running: $SLURM_JOB_NAME"
 echo "Job $SLURM_JOB_ID started on: " `hostname -s`
 echo "Job $SLURM_JOB_ID started on: " `date `
@@ -42,6 +44,7 @@ echo "Max Task: $SLURM_ARRAY_TASK_MIN"
 echo "Min Task: $SLURM_ARRAY_TASK_MAX"
 echo "Current Task: $SLURM_ARRAY_TASK_ID"
 echo "Frequency $FREQ hz"
+echo "Realization $VERIF_RLZ"
 echo "Heteroscedasticity: $FLAG_HETERO"
 echo "Updated short-distance saturation: $FLAG_UPD_ST"
 echo " "
@@ -70,7 +73,7 @@ cd /home/glavrent/enceladus/NGAWest3_GMMdev/Analyses/gmm_ergodic/regression/
 stdbuf -oL python regression_erg_gmm_regionalized.py
 
 # echo job info on joblog:
-echo "Completed GMM Regression (Production)"
+echo "Completed GMM Regression (Verification)"
 echo "Job $SLURM_JOB_ID completed: $SLURM_JOB_NAME"
 echo "Job $SLURM_JOB_ID started on: " `hostname -s`
 echo "Job $SLURM_JOB_ID started on: " `date `
@@ -78,7 +81,8 @@ echo "Max Task: $SLURM_ARRAY_TASK_MIN"
 echo "Min Task: $SLURM_ARRAY_TASK_MAX"
 echo "Current Task: $SLURM_ARRAY_TASK_ID"
 echo "Frequency $FREQ hz"
+echo "Realization $VERIF_RLZ"
 echo "Heteroscedasticity: $FLAG_HETERO"
 echo "Updated short-distance saturation: $FLAG_UPD_ST"
 echo " "
-#### resnick_submit_gmm_regression_freq_single_mthread.sh STOP ####
+#### resnick_submit_gmm_regression_verif_mthread_array_freq_single.sh STOP ####
