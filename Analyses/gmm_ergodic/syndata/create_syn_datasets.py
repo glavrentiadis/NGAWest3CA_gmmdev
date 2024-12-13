@@ -38,16 +38,42 @@ flag_hetero_sd = True
 flag_hw = True
 
 #regionaliztion option
-#median scaling
-flag_reg_intrcp = True
-flag_reg_smag   = True
-flag_reg_atten  = True
-flag_reg_vs30   = True
-#aleatory varibility
-flag_reg_tau0   = True
-flag_reg_tauP   = True
-flag_reg_phiS   = True
-flag_reg_phi0   = True
+flag_reg_all = True
+#regionalization
+if flag_reg_all is None:
+    #median scaling
+    flag_reg_intrcp = True
+    flag_reg_smag   = True
+    flag_reg_atten  = True
+    flag_reg_vs30   = True
+    #aleatory varibility
+    flag_reg_tau0   = False
+    flag_reg_tauP   = True
+    flag_reg_phiS   = True
+    flag_reg_phi0   = True
+elif flag_reg_all:
+    #median scaling
+    flag_reg_intrcp = True
+    flag_reg_smag   = True
+    flag_reg_atten  = True
+    flag_reg_vs30   = True
+    #aleatory varibility
+    flag_reg_tau0   = True
+    flag_reg_tauP   = True
+    flag_reg_phiS   = True
+    flag_reg_phi0   = True
+else:
+    #median scaling
+    flag_reg_intrcp = False
+    flag_reg_smag   = False
+    flag_reg_atten  = False
+    flag_reg_vs30   = False
+    #aleatory varibility
+    flag_reg_tau0   = False
+    flag_reg_tauP   = False
+    flag_reg_phiS   = False
+    flag_reg_phi0   = False
+    
 #updated short-distance geometrical spreading
 flag_upd_satur  = True
 
@@ -58,73 +84,81 @@ phiS_ell = 10
 n_realiz = 10
 
 #regionaliztion of intercpet
-reg_intrcp_scl = {'PW': 1.00,
-                  'AK': 1.05,
-                  'SEE':1.10, 
-                  'CH': 0.95, 
-                  'JPN':0.80,  
-                  'NZ': 1.15,  
-                  'TWN':0.90}
+reg_intrcp_scl = {'PW':  1.00,
+                  'AK':  1.05,
+                  'SEE': 1.10,
+                  'IRN': 1.20,
+                  'CH':  0.95, 
+                  'JPN': 0.80,  
+                  'NZ':  1.15,  
+                  'TWN': 0.90}
 
 #regionaliztion of small magnitude scaling
-reg_smag_scl =   {'PW': 1.00,
-                  'AK': 1.05,
-                  'SEE':1.10, 
-                  'CH': 0.95, 
-                  'JPN':0.80,  
-                  'NZ': 1.15,  
-                  'TWN':0.90}
+reg_smag_scl =   {'PW':  1.00,
+                  'AK':  1.05,
+                  'SEE': 1.10, 
+                  'IRN': 1.20,
+                  'CH':  0.95, 
+                  'JPN': 0.80,  
+                  'NZ':  1.15,  
+                  'TWN': 0.90}
 
 #regionaliztion of anelastic attenuation
-reg_atten_scl =  {'PW': 1.00,
-                  'AK': 1.05,
-                  'SEE':1.10, 
-                  'CH': 0.95, 
-                  'JPN':0.80,  
-                  'NZ': 1.15,  
-                  'TWN':0.90}
+reg_atten_scl =  {'PW':  1.00,
+                  'AK':  1.05,
+                  'SEE': 1.10, 
+                  'IRN': 1.20,
+                  'CH':  0.95, 
+                  'JPN': 0.80,  
+                  'NZ':  1.15,  
+                  'TWN': 0.90}
 
 #regionalization of vs30
-reg_vs30_scl =   {'PW': 1.00,
-                  'AK': 1.05,
-                  'SEE':1.10, 
-                  'CH': 0.95, 
-                  'JPN':0.80,  
-                  'NZ': 1.15,  
-                  'TWN':0.90}
+reg_vs30_scl =   {'PW':  1.00,
+                  'AK':  1.05,
+                  'SEE': 1.10, 
+                  'IRN': 1.20,
+                  'CH':  0.95, 
+                  'JPN': 0.80,  
+                  'NZ':  1.15,  
+                  'TWN': 0.90}
 
 #regionaliztion of aleatory variability
-reg_tau0_scl =  {'PW': 1.00,
-                 'AK': 1.05,
-                 'SEE':1.10, 
-                 'CH': 0.95, 
-                 'JPN':0.80,  
-                 'NZ': 1.15,  
-                 'TWN':0.90}
+reg_tau0_scl =   {'PW':  1.00,
+                  'AK':  1.05,
+                  'SEE': 1.10, 
+                  'IRN': 1.20,
+                  'CH':  0.95, 
+                  'JPN': 0.80,  
+                  'NZ':  1.15,  
+                  'TWN': 0.90}
 
-reg_tauP_scl =  {'PW': 1.00,
-                 'AK': 1.05,
-                 'SEE':1.10, 
-                 'CH': 0.95, 
-                 'JPN':0.80,  
-                 'NZ': 1.15,  
-                 'TWN':0.90}
+reg_tauP_scl =   {'PW':  1.00,
+                  'AK':  1.05,
+                  'SEE': 1.10, 
+                  'IRN': 1.20,
+                  'CH':  0.95, 
+                  'JPN': 0.80,  
+                  'NZ':  1.15,  
+                  'TWN': 0.90}
 
-reg_phi0_scl = {'PW': 1.00,
-                'AK': 1.05,
-                'SEE':1.10, 
-                'CH': 0.95, 
-                'JPN':0.80,  
-                'NZ': 1.15,  
-                'TWN':0.90}
+reg_phi0_scl =   {'PW':  1.00,
+                  'AK':  1.05,
+                  'SEE': 1.10, 
+                  'IRN': 1.20,
+                  'CH':  0.95, 
+                  'JPN': 0.80,  
+                  'NZ':  1.15,  
+                  'TWN': 0.90}
 
-reg_phiS_scl = {'PW':1.00,
-                'AK': 1.05,
-                'SEE':1.10, 
-                'CH': 0.95, 
-                'JPN':0.80,  
-                'NZ': 1.15,  
-                'TWN':0.90}
+reg_phiS_scl =   {'PW':  1.00,
+                  'AK':  1.05,
+                  'SEE': 1.10, 
+                  'IRN': 1.20,
+                  'CH':  0.95, 
+                  'JPN': 0.80,  
+                  'NZ':  1.15,  
+                  'TWN': 0.90}
 
 #ensure regionalization consistency
 assert(reg_smag_scl.keys()  == reg_intrcp_scl.keys()),"Error. Inconsistent keys."
@@ -146,10 +180,14 @@ fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20241205_censored.c
 if not flag_upd_satur:
     fn_coeffs = '../../../Raw_files/model_coeffs/BA18coefs_mod.csv'
 else:
-    fn_coeffs = '../../../Raw_files/model_coeffs/coeff_20241021_mod3.csv'
+    # fn_coeffs = '../../../Raw_files/model_coeffs/coeff_20241021_mod3.csv'
+    fn_coeffs = '../../../Data/gmm_ergodic/preprocessing/eas_coefs_orig.csv'
+    fn_coeffs = '../../../Data/gmm_ergodic/preprocessing/eas_coefs_smoothed.csv'
 
 #output directory
 dir_out = '../../../Data/gmm_ergodic/verification/dataset/'
+if not flag_reg_all is None:
+    dir_out += 'regionalized/' if flag_reg_all else 'global/'
 dir_out += 'updated_saturation/' if flag_upd_satur else 'original_saturation/'
 dir_out += 'heteroscedastic' if flag_hetero_sd else 'homoscedastic'
 dir_out += '_hangwall/' if flag_hw else '/'
@@ -160,12 +198,13 @@ dir_out += '_hangwall/' if flag_hw else '/'
 #read flatfile
 df_flatfile = pd.read_csv(fn_fltfile)
 #identify gm colums
-i_flt_im = np.array([bool(re.match('^eas_f(.*)hz', c)) for c in df_flatfile.columns])
-flt_freq = np.array([float(re.findall('eas_f(.*)hz', c)[0]) for c in df_flatfile.columns[i_flt_im]])
+i_flt_im   = np.array([bool(re.match('^eas_f(.*)hz', c)) for c in df_flatfile.columns])
+i_flt_imln = np.array([bool(re.match('^easln_f(.*)hz', c)) for c in df_flatfile.columns])
+flt_freq   = np.array([float(re.findall('eas_f(.*)hz', c)[0]) for c in df_flatfile.columns[i_flt_im]])
 #identify unavailable gm
 i_flt_gm_nan = np.isnan(df_flatfile.loc[:,i_flt_im].values)
 #remove intensity measures
-df_flatfile = df_flatfile.loc[:,~i_flt_im]
+df_flatfile = df_flatfile.loc[:,~np.logical_or(i_flt_im, i_flt_imln)]
 
 #read coefficients
 df_coeffs  = pd.read_csv(fn_coeffs)
@@ -264,11 +303,11 @@ for j, f in enumerate(df_coeffs.f):
     c8r = c8 * (np.array([reg_vs30_scl[r] for r in reg ])   if flag_reg_vs30   else np.ones(len(reg)) )
     
     #regionalized aleatory terms
-    s1r = s1 * (np.array([reg_tau0_scl[r] for r in reg ]) if reg_tau0_scl else np.ones(len(reg)) )
-    s3r = s3 * (np.array([reg_tauP_scl[r] for r in reg ]) if reg_tauP_scl else np.ones(len(reg)) )
-    s4r = s4 * (np.array([reg_phiS_scl[r] for r in reg ]) if reg_phiS_scl else np.ones(len(reg)) )
-    s5r = s5 * (np.array([reg_phi0_scl[r] for r in reg ]) if reg_phi0_scl else np.ones(len(reg)) )
-    s6r = s6 * (np.array([reg_phi0_scl[r] for r in reg ]) if reg_phi0_scl else np.ones(len(reg)) )
+    s1r = s1 * (np.array([reg_tau0_scl[r] for r in reg ]) if flag_reg_tau0 else np.ones(len(reg)) )
+    s3r = s3 * (np.array([reg_tauP_scl[r] for r in reg ]) if flag_reg_tauP else np.ones(len(reg)) )
+    s4r = s4 * (np.array([reg_phiS_scl[r] for r in reg ]) if flag_reg_phiS else np.ones(len(reg)) )
+    s5r = s5 * (np.array([reg_phi0_scl[r] for r in reg ]) if flag_reg_phi0 else np.ones(len(reg)) )
+    s6r = s6 * (np.array([reg_phi0_scl[r] for r in reg ]) if flag_reg_phi0 else np.ones(len(reg)) )
     
     #remove heteroscedasticity
     if not flag_hetero_sd:
@@ -320,7 +359,7 @@ for j, f in enumerate(df_coeffs.f):
 
     #store aleatory std for rnd sampling
     aleat_sd['f%.9fhz'%f] = (tau0[eq_idx], tauP[eq_idx], phiS[st_idx], phi0)    
-    
+
 
 #sample variability
 df_realiz_all = []
@@ -353,13 +392,13 @@ for l in range(n_realiz):
         df_realiz.loc[:,'dWS_f%.9fhz'%f] = dWS
         #total aleatory samples
         df_realiz.loc[:,'dT_f%.9fhz'%f]  = dB + (rrup - 50.) * dBP + dS + dWS
-
         #compute response variables
         df_realiz.loc[:,'eas_f%.9fhz'%f]         = np.exp( df_realiz.loc[:,['f_med_f%.9fhz'%f,'dT_f%.9fhz'%f]].sum(axis=1) )  
         df_realiz.loc[:,'eas_wo_mag_f%.9fhz'%f]  = np.exp( df_realiz.loc[:,['f_path_f%.9fhz'%f,'f_site_f%.9fhz'%f,
                                                                             'dT_f%.9fhz'%f]].sum(axis=1) )
 
         df_realiz_all.append(df_realiz)
+
 
 # %% Save data
 # ======================================

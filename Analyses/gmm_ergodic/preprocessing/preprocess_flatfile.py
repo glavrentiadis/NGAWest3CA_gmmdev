@@ -82,6 +82,7 @@ reg_utm_zones = {'PSW':'11N',
 
 #vs30 for non-linear effects
 vsref_nl = 800.
+vs30min_nl = 200.
 
 #ground motion flatifle
 if flag_censor:
@@ -244,7 +245,8 @@ elif flag_frmt_rev >= 2:
 #intialize ids
 reg_id = np.full(n_gm, -1)
 #intialize names
-reg_name = np.full(n_gm, 'TMP')
+reg_abrv = np.full(n_gm, 'TMP')
+reg_name = np.full(n_gm, 'Temp')
 reg_utm  = np.full(n_gm, '00N')
 
 #source regionalization
@@ -257,16 +259,17 @@ if 'gdf_reg' in locals():
     #add region information
     gdf_eq = gpd.sjoin(gdf_eq, gdf_reg, how="inner", op="within")
     #geopandas ground motoin 
-    gdf_gm = pd.merge(df_orig_flt[['event_id']], gdf_eq, how='left')[['reg_id','reg_abrv','reg_utm']]
+    gdf_gm = pd.merge(df_orig_flt[['event_id']], gdf_eq, how='left')[['reg_id','reg_abrv','reg_name','reg_utm']]
 
     #region id, name, and utm
     reg_id   = gdf_gm.reg_id.values
-    reg_name = gdf_gm.reg_abrv.values
+    reg_abrv = gdf_gm.reg_abrv.values
+    reg_name = gdf_gm.reg_name.values
     reg_utm  = gdf_gm.reg_utm.values
     
     #region names
     _, reg_idx = np.unique(reg_id, return_index=True)
-    reg = reg_name[reg_idx]
+    reg = reg_abrv[reg_idx]
 
 else:
     for j in range(n_gm):
@@ -342,11 +345,18 @@ cn_easln_freq = ['easln_f%.9fhz'%f for f in freq]
 eas = df_orig_flt.loc[:,i_gm].values
 eas[eas == -999] = np.nan
 eas[eas < 1e-13] = np.nan
+#usable frequency range
+luf = df_orig_flt.loc[:,'min.useable.freq'].values
+muf = df_orig_flt.loc[:,'max.useable.freq'].values
+#update frequency rnage
+for j in range(n_gm):
+    eas[j,freq<luf[j]] = np.nan
+    eas[j,freq>muf[j]] = np.nan
 
 # ground motions (without non-linear scaling)
 # ---   ---   ---   ---
 eas_med = np.zeros(eas.shape)
-f_nl  = np.zeros(eas.shape)
+f_nl    = np.zeros(eas.shape)
 
 #iterate over all scenarios
 for j in range(n_gm):
@@ -363,7 +373,7 @@ for j in range(n_gm):
     eas_med[j,:] = np.exp( np.interp( np.log(freq), np.log(gmm_eas.freqs),   np.log(gmm_eas.eas)) )
 
     #non-linear correction factor
-    f_nl[j,:] = scalingNL(vs30[j], freq, eas_med[j,:])
+    f_nl[j,:] = scalingNL(np.maximum(vs30[j], vs30min_nl), freq, eas_med[j,:])
 
 #linearly corrected eas
 eas_lin = eas / np.exp( f_nl )
@@ -376,7 +386,8 @@ df_gm_flt = pd.DataFrame({'motionid':motion_id,
                           'eventid':event_id, 'stationid':sta_id})
 
 #region info
-df_gm_flt.loc[:,'reg']     = reg_name
+df_gm_flt.loc[:,'reg']     = reg_abrv
+df_gm_flt.loc[:,'regname'] = reg_name
 #country
 df_gm_flt.loc[:,'country'] = country_name
 
@@ -428,6 +439,9 @@ df_gm_flt.loc[:,'z1.0']      = z1p0
 df_gm_flt.loc[:,'z2.5']      = z2p5
 df_gm_flt.loc[:,'z1.0flag']  = z1p0
 df_gm_flt.loc[:,'z2.5flag']  = z2p5
+#usable  frequency range
+df_gm_flt.loc[:,'luf']       = luf
+df_gm_flt.loc[:,'muf']       = muf
 
 #ground motion
 df_gm_flt.loc[:,cn_eas_freq]   = eas
