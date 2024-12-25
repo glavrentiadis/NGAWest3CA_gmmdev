@@ -7,19 +7,18 @@ Multi-threading partitioning on likelihood evaluation
 
 Mean scaling includes:
   * magnitude scaling (small-to-medium mag scaling)
+  * depth to top of rupture
   * geometrical spreading
   * anealstic attenuation
   * vs30 scaling
-  * normal and reverse scaling
   * hanging wall scaling
   
 Fixed terms include:
   * magnitude scaling (large events)
-  * short distance saturation
-  * reverse fault scaling (zero)
+  * normal and reverse scaling
+  * short distance finite-fault saturation
   * magnitude break in mag scaling
   * width of magnitude transition
-  * magnitude scaling for short distance saturation
   * maximum depth to top of rupture
 
 Aleatory variability includes:
@@ -176,7 +175,14 @@ data {
   real c_10amu;
   real c_10bmu;
   real c_13mu;
-    
+  //aleatory variability
+  real s_1mu;
+  real s_2mu;
+  real s_3mu;
+  real s_4mu;
+  real s_5mu;
+  real s_6mu;
+  
   //aleat magnitude breaks
   real s_1mag;
   real s_2mag;
@@ -209,8 +215,12 @@ data {
 }
 
 transformed data {
+  //fixed sof scaling
+  real c_10afxd = c_10amu; 
+  real c_10bfxd = c_10bmu;
   //scaled priors
   real c_7mu_scl = 1/scl_atten * c_7mu;
+  real s_3mu_scl = 1/scl_atten * s_3mu;
 
   //source scaling
   // - - - - - - - - - -
@@ -301,8 +311,6 @@ parameters {
   //source scaling
   real c_3;  //small-to-medium mag scaling
   real c_9;
-  real<lower=0.0> c_10a;
-  real<upper=0.0> c_10b;
   real<lower=0.0> c_13;
   //path scaling
   real<lower=-10.0, upper=0.0> c_4;  //geometrical spreading
@@ -333,7 +341,7 @@ parameters {
 
   //aleatory standard regionalization
   //------------------------------------
-  vector<lower=0.1, upper=10.0>[NREG-1] lambda_tau0r;
+  //vector<lower=0.1, upper=10.0>[NREG-1] lambda_tau0r;
   vector<lower=0.1, upper=10.0>[NREG-1] lambda_tauPr;
   vector<lower=0.1, upper=10.0>[NREG-1] lambda_phiSr;
   vector<lower=0.1, upper=10.0>[NREG-1] lambda_phi0r;
@@ -354,7 +362,7 @@ transformed parameters {
   vector[NREG] c_3r = c_3 * append_row(1., lambda_3r);
   vector[NREG] c_8r = c_8 * append_row(1., lambda_8r);
   //aleatory standard deviations
-  vector[NREG] s_1r = s_1 * append_row(1., lambda_tau0r);
+  //vector[NREG] s_1r = s_1 * append_row(1., lambda_tau0r);
   vector[NREG] s_4r = s_4 * append_row(1., lambda_phiSr);
   vector[NREG] s_5r = s_5 * append_row(1., lambda_phi0r);
   vector[NREG] s_6r = s_6 * append_row(1., lambda_phi0r);
@@ -369,43 +377,42 @@ model {
   //evaluate priors
   //------------------------------------
   //global coefficients
-  target += normal_lpdf(c_1   | c_1mu,   0.5);
-  target += normal_lpdf(c_3   | c_3mu,   0.5);
-  target += normal_lpdf(c_4   | c_4mu,   0.5);
-  target += normal_lpdf(c_8   | c_8mu,   0.5);
+  target += normal_lpdf(c_1   | c_1mu,   0.10);
+  target += normal_lpdf(c_3   | c_3mu,   0.10);
+  target += normal_lpdf(c_4   | c_4mu,   0.025);
+  target += normal_lpdf(c_8   | c_8mu,   0.10);
   target += normal_lpdf(c_9   | c_9mu,   0.01);
-  target += normal_lpdf(c_10a | c_10amu, 0.05);
-  target += normal_lpdf(c_10b | c_10bmu, 0.05);
-  target += normal_lpdf(c_13  | c_13mu,  0.1);
+  target += normal_lpdf(c_13  | c_13mu,  0.05);
   //scaled coefficients coefficients
-  target += normal_lpdf(c_7_scl | c_7mu_scl, 0.25);
+  target += normal_lpdf(c_7_scl | c_7mu_scl, 0.10);
   
   //aleatory std
-  target += lognormal_lpdf(s_1 | -0.35, 0.55);
-  target += lognormal_lpdf(s_2 | -0.35, 0.55);
-  target += lognormal_lpdf(s_4 | -0.35, 0.55);
-  target += lognormal_lpdf(s_5 | -0.35, 0.55);
-  target += lognormal_lpdf(s_6 | -0.35, 0.55);
+  target += lognormal_lpdf(s_1 | log(s_1mu), 0.30);
+  target += lognormal_lpdf(s_2 | log(s_2mu), 0.30);
+  target += lognormal_lpdf(s_4 | log(s_4mu), 0.30);
+  target += lognormal_lpdf(s_5 | log(s_5mu), 0.30);
+  target += lognormal_lpdf(s_6 | log(s_6mu), 0.30);
   //scaled aleatory var
-  target += lognormal_lpdf(s_3_scl | -1.50, 0.40);
+  target += lognormal_lpdf(s_3_scl | log(s_3mu_scl), 0.25);  
     
   //magnitude scaling
   for (i in 1:NEQ) {
-    tau0r_array[i]  = interp(s_1mag, s_2mag, s_1r[regeq[i]], s_2, mag[i]);
+    tau0r_array[i]  = interp(s_1mag, s_2mag, s_1, s_2, mag[i]);
+    //tau0r_array[i]  = interp(s_1mag, s_2mag, s_1r[regeq[i]], s_2, mag[i]);
     phi0r_array[i]  = interp(s_5mag, s_6mag, s_5r[regeq[i]], s_6r[regeq[i]], mag[i]);
   }
   
   //regional coefficient adjustments 
-  target += normal_lpdf(lambda_1r | 1., 0.15);
-  target += normal_lpdf(lambda_3r | 1., 0.15);
-  target += normal_lpdf(lambda_7r | 1., 0.15);
-  target += normal_lpdf(lambda_8r | 1., 0.15);
+  target += normal_lpdf(lambda_1r | 1., 0.10);
+  target += normal_lpdf(lambda_3r | 1., 0.10);
+  target += normal_lpdf(lambda_7r | 1., 0.10);
+  target += normal_lpdf(lambda_8r | 1., 0.10);
 
   //regional aleatory std adjustments 
-  target += normal_lpdf(lambda_tau0r | 1., 0.15);
-  target += normal_lpdf(lambda_tauPr | 1., 0.15);
-  target += normal_lpdf(lambda_phiSr | 1., 0.15);
-  target += normal_lpdf(lambda_phi0r | 1., 0.15);
+  //target += normal_lpdf(lambda_tau0r | 1., 0.05);
+  target += normal_lpdf(lambda_tauPr | 1., 0.05);
+  target += normal_lpdf(lambda_phiSr | 1., 0.05);
+  target += normal_lpdf(lambda_phi0r | 1., 0.05);
   
   //evaluate likelihood
   //------------------------------------
@@ -421,7 +428,7 @@ model {
                        f_smag, f_ztor, f_r, f_n, f_hw,
                        f_gs, f_gs_lrup, f_atten,
                        f_vs30,
-                       c_2fxd, c_4, c_9, c_10a, c_10b, c_13, 
+                       c_2fxd, c_4, c_9, c_10afxd, c_10bfxd, c_13, 
                        c_1r, c_3r, c_7r_scl, c_8r,
                        deltaB, deltaBP_scl, deltaS, f_dBP,
                        phi0r_array);
@@ -430,9 +437,13 @@ model {
 generated quantities {
   //fixed parameters
   //------------------------------------
+  //linear coefficients
   real c_2   = c_2fxd;
   real c_5   = c_5fxd;
   real c_6   = c_6fxd;
+  real c_10a = c_10afxd;
+  real c_10b = c_10bfxd;
+  //nonlinear coefficients
   real c_n   = c_nfxd;
   real c_hm  = c_hmfxd;
   real c_mag = c_magfxd;
@@ -450,18 +461,26 @@ generated quantities {
 
   //aleatory variability
   //------------------------------------
-  real tau   = s_1 ;
+  real tau   = s_2;
   real tau_P = s_3;
   real phi_S = s_4;
-  real phi   = s_5;
+  real phi   = s_6;
+  
+  //regional terms
+  //------------------------------------
+  //scaling factors
+  vector[NREG-1] lambda_tau0r = to_vector( rep_array(1.0, NREG-1) );
+
+  //aleatory standard deviations
+  vector[NREG] s_1r = s_1 * append_row(1., lambda_tau0r);
   //regionalized aleatory std
-  vector[NREG] tau0r = s_1r;
+  vector[NREG] tau0r = to_vector( rep_array(s_2, NREG) );
   vector[NREG] tauPr = s_3r;
   vector[NREG] phiSr = s_4r;
-  vector[NREG] phi0r = s_5r;
+  vector[NREG] phi0r = s_6r;
   //scaled regionalized aleatory std
   vector[NREG] tauPr_scl = s_3r_scl;
-
+  
   //evaluate median ground motion
   //------------------------------------
   vector[N] f_gmm = gmm_median(N, reg, eq, st,

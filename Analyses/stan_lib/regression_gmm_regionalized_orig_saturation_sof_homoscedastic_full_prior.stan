@@ -1,20 +1,21 @@
 /******************************************************
 Full MCMc regression to determine the coefficients of 
 EAS ergodic GMM. Assumes homoscedastic aleatory variability.
+Original short-distance saturation.
 
 Mean scaling includes:
   * magnitude scaling (small-to-medium mag scaling)
+  * depth to top of rupture
+  * normal and reverse scaling
   * geometrical spreading
   * anealstic attenuation
   * vs30 scaling
-  * normal and fault parallel scaling
 
 Fixed terms include:
   * magnitude scaling (large events)
-  * short distance saturation
+  * short distance finite-fault saturation
   * magnitude break in mag scaling
   * width of magnitude transition
-  * magnitude scaling for short distance saturation
   * maximum depth to top of rupture
 
 Aleatory variability includes:
@@ -302,4 +303,9 @@ model {
   //noise
   deltaWS ~ normal(0., phi_r[reg]);
 }
+
+generated quantities {
+  //hanging wall scaling
+  real c_13 = 0.;
+ }
 

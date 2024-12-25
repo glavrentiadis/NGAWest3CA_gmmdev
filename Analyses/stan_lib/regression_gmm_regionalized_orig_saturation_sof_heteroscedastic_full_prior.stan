@@ -1,23 +1,21 @@
 /******************************************************
 Full MCMc regression to determine the coefficients of 
 EAS ergodic GMM. Assumes heteroscedastic aleatory variability.
-Includes updated saturation scaling.
-
-Multi-threading partitioning on likelihood evaluation
+Original short-distance saturation.
 
 Mean scaling includes:
   * magnitude scaling (small-to-medium mag scaling)
+  * depth to top of rupture
+  * normal and reverse scaling
   * geometrical spreading
   * anealstic attenuation
   * vs30 scaling
-  * normal and reverse scaling
 
 Fixed terms include:
   * magnitude scaling (large events)
-  * short distance saturation
+  * short distance finite-fault saturation
   * magnitude break in mag scaling
   * width of magnitude transition
-  * magnitude scaling for short distance saturation
   * maximum depth to top of rupture
 
 Aleatory variability includes:
@@ -28,12 +26,10 @@ Aleatory variability includes:
 
 Regionalized terms:
  median scaling:
-  * small magnitude scaling
   * anelastic attenuation
   * vs30 scaling
  aleatory variability:
-  * aleatory between-event variability
-  * aleatory between-event-path variability
+  * aleatory between-event path variability
   * aleatory between-site variability
   * aleatory within-event-site variability
 ******************************************************/
@@ -52,13 +48,6 @@ functions {
         
     return y;
   }  
-
-  // normal log-likelihood for multi-threading
-  real partial_normal_lpdf(array[] real y_slice,
-                           int start, int end,
-                           real mu, vector sigma) {
-    return normal_lpdf(y_slice | mu, sigma[start:end] );
-  }
 }
 
 data {
@@ -86,8 +75,6 @@ data {
   real scl_atten;
   //scale factor for dBP
   real scl_dBP;
-  //rupture distance offset
-  real rrup_offset_dBP;
 
   //mean parameters
   real c_1mu;
@@ -119,9 +106,6 @@ data {
 
   //output
   vector[N] Y; //total residuals
-  
-  //multi-treading partitioning
-  int grainsize;
 }
 
 transformed data {
@@ -147,7 +131,7 @@ transformed data {
   // - - - - - - - - - -
   vector[N] f_gs;
   for (i in 1:N)
-    f_gs[i] = log( rrup[i] + c_5fxd * exp(c_6fxd * max([mag[eq[i]]-c_hmfxd, 0.])) );
+    f_gs[i] = log( rrup[i] + c_5fxd * cosh(c_6fxd * max([mag[eq[i]]-c_hmfxd, 0.])) );
   //geometrical spreading scaling at large distances
   vector[N] f_gs_lrup = log( sqrt(rrup.^2 + 50.^2.) );
   //anelastic attenuation
@@ -161,7 +145,7 @@ transformed data {
     f_vs30[i] = log( min([vs30[i], 1000.]) / 800. );
     
   //between event path scaling
-  vector[N] f_dBP = scl_dBP * (rrup - rrup_offset_dBP);
+  vector[N] f_dBP = scl_dBP * rrup;
 }
 
 parameters {
@@ -184,7 +168,6 @@ parameters {
   //coefficient regionalization
   //------------------------------------
   vector<lower=0.1, upper=10.0>[NREG-1] lambda_1r;
-  vector<lower=0.1, upper=10.0>[NREG-1] lambda_3r;
   vector<lower=0.1, upper=10.0>[NREG-1] lambda_7r;
   vector<lower=0.1, upper=10.0>[NREG-1] lambda_8r;
 
@@ -201,12 +184,12 @@ parameters {
   //scaled terms
   real<lower=0.01> s_3_scl;
 
+
   //aleatory standard regionalization
   //------------------------------------
-  vector<lower=0.1, upper=10.0>[NREG-1] lambda_tau0r;
   vector<lower=0.1, upper=10.0>[NREG-1] lambda_tauPr;
   vector<lower=0.1, upper=10.0>[NREG-1] lambda_phiSr;
-  vector<lower=0.1, upper=10.0>[NREG-1] lambda_phi0r;
+  vector<lower=0.1, upper=10.0>[NREG-1] lambda_phir;
   
   //random terms
   //------------------------------------
@@ -230,13 +213,11 @@ transformed parameters {
   //------------------------------------
   //coefficients
   vector[NREG] c_1r = c_1 * append_row(1., lambda_1r);
-  vector[NREG] c_3r = c_3 * append_row(1., lambda_3r);
   vector[NREG] c_8r = c_8 * append_row(1., lambda_8r);
   //aleatory standard deviations
-  vector[NREG] s_1r = s_1 * append_row(1., lambda_tau0r);
   vector[NREG] s_4r = s_4 * append_row(1., lambda_phiSr);
-  vector[NREG] s_5r = s_5 * append_row(1., lambda_phi0r);
-  vector[NREG] s_6r = s_6 * append_row(1., lambda_phi0r);
+  vector[NREG] s_5r = s_5 * append_row(1., lambda_phir);
+  vector[NREG] s_6r = s_6 * append_row(1., lambda_phir);
   //scaled terms
   vector[NREG] c_7r_scl = c_7_scl * append_row(1., lambda_7r);
   vector[NREG] s_3r_scl = s_3_scl * append_row(1., lambda_tauPr);
@@ -259,7 +240,7 @@ transformed parameters {
   f_med  = c_1r[reg];
   //source scaling
   f_med  += (c_2 * (mag[eq] - 6.) + 
-            (c_2 - c_3r[reg]) / c_n .* log( 1 + exp(c_n * (c_mag - mag[eq])) ) +
+            (c_2 - c_3) / c_n * log( 1 + exp(c_n * (c_mag - mag[eq])) ) +
             c_9   * f_ztor[eq] + 
             c_10a * f_r[eq] +
             c_10b * f_n[eq]);
@@ -278,69 +259,73 @@ transformed parameters {
   real phi_S = s_4;
   real phi   = s_5;
   //regionalized aleatory std
-  vector[NREG] tau0r  = s_1r;
-  vector[NREG] tauPr = s_3r;
-  vector[NREG] phiSr = s_4r;
-  vector[NREG] phi0r  = s_5r;
+  vector[NREG] tau_Pr = s_3r;
+  vector[NREG] phi_Sr = s_4r ;
+  vector[NREG] phi_r  = s_5r;
   //scaled regionalized aleatory std
-  vector[NREG] tauPr_scl = s_3r_scl;
+  vector[NREG] tau_Pr_scl = s_3r_scl;
 
   //within event-site residuals
   //------------------------------------
   vector[N] deltaWS = Y - f_med - (deltaB[eq] + f_dBP .* deltaBP_scl[eq] + deltaS[st]);
+
 }
 
 model {
-  vector[NEQ] tau0r_array;
-  vector[NEQ] phi0r_array;
+  vector[NEQ] tau_array;
+  vector[NEQ] phi_array;
   //evaluate priors
   //------------------------------------
   //global coefficients
-  target += normal_lpdf(c_1   | c_1mu, 0.5);
-  target += normal_lpdf(c_3   | c_3mu, 0.5);
-  target += normal_lpdf(c_4   | c_4mu, 0.5);
-  target += normal_lpdf(c_8   | c_8mu, 0.5);
-  target += normal_lpdf(c_9   | c_9mu, 0.01);
-  target += normal_lpdf(c_10b | c_10amu, 0.5);
-  target += normal_lpdf(c_10a | c_10bmu, 0.5);
+  c_1   ~ normal(c_1mu, 0.5);
+  c_3   ~ normal(c_3mu, 0.5);
+  c_4   ~ normal(c_4mu, 0.5);
+  c_8   ~ normal(c_8mu, 0.5);
+  c_9   ~ normal(c_9mu, 0.01);
+  c_10b ~ normal(c_10amu, 0.5);
+  c_10a ~ normal(c_10bmu, 0.5);
   //scaled coefficients coefficients
-  target += normal_lpdf(c_7_scl | c_7mu_scl, 0.25);
+  c_7_scl   ~ normal(c_7mu_scl, 0.25);
   
   //aleatory std
-  target += lognormal_lpdf(s_1 | -0.35, 0.55);
-  target += lognormal_lpdf(s_2 | -0.35, 0.55);
-  target += lognormal_lpdf(s_4 | -0.35, 0.55);
-  target += lognormal_lpdf(s_5 | -0.35, 0.55);
-  target += lognormal_lpdf(s_6 | -0.35, 0.55);
+  s_1 ~ lognormal(-0.35, 0.55);
+  s_2 ~ lognormal(-0.35, 0.55);
+  s_4 ~ lognormal(-0.35, 0.55);
+  s_5 ~ lognormal(-0.35, 0.55);
+  s_6 ~ lognormal(-0.35, 0.55);
   //scaled aleatory var
-  target += lognormal_lpdf(s_3_scl | -1.50, 0.40);
+  s_3_scl ~ lognormal(-1.50, 0.40);
+  
   
   //magnitude scaling
   for (i in 1:NEQ) {
-    tau0r_array[i]  = interp(s_1mag, s_2mag, s_1r[regeq[i]], s_2, mag[i]);
-    phi0r_array[i]  = interp(s_5mag, s_6mag, s_5r[regeq[i]], s_6r[regeq[i]], mag[i]);
+    tau_array[i]  = interp(s_1mag, s_2mag, s_1, s_2, mag[i]);
+    phi_array[i]  = interp(s_5mag, s_6mag, s_5r[regeq[i]], s_6r[regeq[i]], mag[i]);
   }
   
   //regional coefficient adjustments 
-  target += normal_lpdf(lambda_1r | 1., 0.10);
-  target += normal_lpdf(lambda_3r | 1., 0.10);
-  target += normal_lpdf(lambda_7r | 1., 0.10);
-  target += normal_lpdf(lambda_8r | 1., 0.10);
+  lambda_1r ~ normal(1., 0.10);
+  lambda_7r ~ normal(1., 0.10);
+  lambda_8r ~ normal(1., 0.10);
 
   //regional aleatory std adjustments 
-  target += normal_lpdf(lambda_tau0r | 1., 0.10);
-  target += normal_lpdf(lambda_tauPr | 1., 0.10);
-  target += normal_lpdf(lambda_phiSr | 1., 0.10);
-  target += normal_lpdf(lambda_phi0r | 1., 0.10);
+  lambda_tauPr ~ normal(1., 0.10);
+  lambda_phiSr ~ normal(1., 0.10);
+  lambda_phir  ~ normal(1., 0.10);
 
   //evaluate likelihood
   //------------------------------------
   //random effects
-  target += reduce_sum(partial_normal_lpdf, to_array_1d(deltaB),      grainsize, 0., tau0r_array);
-  target += reduce_sum(partial_normal_lpdf, to_array_1d(deltaS),      grainsize, 0., phiSr[regst]);
+  deltaB  ~ normal(0,  tau_array);
+  deltaS  ~ normal(0., phi_Sr[regst]);
   //scaled parameters
-  target += reduce_sum(partial_normal_lpdf, to_array_1d(deltaBP_scl), grainsize, 0., tauPr_scl[regeq]);
+  deltaBP_scl ~ normal(0., tau_Pr_scl[regeq]);  
   //noise
-  target += reduce_sum(partial_normal_lpdf, to_array_1d(deltaWS),     grainsize, 0., phi0r_array[eq]);
+  deltaWS ~ normal(0., phi_array[eq]);
 }
+
+generated quantities {
+  //hanging wall scaling
+  real c_13 = 0.;
+ }
 
