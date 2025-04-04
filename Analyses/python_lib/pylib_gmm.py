@@ -133,15 +133,15 @@ def gmm_eas(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
     return f_med, f_src, f_path, f_site, tau, tauP, phiS, phi
 
 #updated short-distance saturation
-def gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
-                regions=['ALL'],
-                c1=[-3.5], c2=1.27, c3=2.8, c4=-1.86, 
-                c5=7.6, c6=0.45, c7=[-0.004], c8=[-1.11], c9=0.0038,
-                c10a=-0.2, c10b=0.2, 
-                c11=[0.19, 0.12, 0.15, 0.15], z1p0_vs30_brk=[200, 300, 500],
-                cn=1.60, cmag=6.75, chm=3.838, ztor_max=20,
-                s1=0.50, s2=0.40, s3=0.002, s4=0.42, s5=0.40, s6=0.45,
-                s1mag=4.0, s2mag=6.0, s5mag=4.0, s6mag=6.0, flag_z1p0=False):
+def gmm_eas_updv1(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
+                  regions=['ALL'],
+                  c1=[-3.5], c2=1.27, c3=2.8, c4=-1.86, 
+                  c5=7.6, c6=0.45, c7=[-0.004], c8=[-1.11], c9=0.0038,
+                  c10a=-0.2, c10b=0.2, 
+                  c11=[0.19, 0.12, 0.15, 0.15], z1p0_vs30_brk=[200, 300, 500],
+                  cn=1.60, cmag=6.75, chm=3.838, ztor_max=20,
+                  s1=0.50, s2=0.40, s3=0.002, s4=0.42, s5=0.40, s6=0.45,
+                  s1mag=4.0, s2mag=6.0, s5mag=4.0, s6mag=6.0, flag_z1p0=False):
     
     #convert numeric input to numpy arrays
     mag  = mag  if isinstance(mag, (np.ndarray, np.generic) )  else np.array([mag])
@@ -254,6 +254,134 @@ def gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
                      for m, s5, s6 in zip(mag, s5_array, s6_array)])
         
     return f_med, f_src, f_path, f_site, tau, tauP, phiS, phi
+
+#updated short-distance saturation
+def gmm_eas_updv2(mag, ztor, sof, rrup, vs30, z1p0, reg=['ALL'],
+                  regions=['ALL'],
+                  c1=[-3.5], c2=1.27, c3=2.8, c4=-1.86, 
+                  c7=[-0.004], c8=[-1.11], c9=0.0038,
+                  c10a=-0.2, c10b=0.2, 
+                  c11=[0.19, 0.12, 0.15, 0.15], z1p0_vs30_brk=[200., 300., 500.],
+                  b1=0.5, b2=0.3, b3=0.58,
+                  cn=1.60, cmag=6.75, chm=3.838, ztor_max=20, H_max = 50.,
+                  s1=0.50, s2=0.40, s3=0.002, s4=0.42, s5=0.40, s6=0.45,
+                  s1mag=4.0, s2mag=6.0, s5mag=4.0, s6mag=6.0, flag_z1p0=False):
+    
+    #convert numeric input to numpy arrays
+    mag  = mag  if isinstance(mag, (np.ndarray, np.generic) )  else np.array([mag])
+    ztor = ztor if isinstance(ztor, (np.ndarray, np.generic) ) else np.array([ztor])
+    sof  = sof  if isinstance(sof, (np.ndarray, np.generic) )  else np.array([sof])
+    rrup = rrup if isinstance(rrup, (np.ndarray, np.generic) ) else np.array([rrup])
+    vs30 = vs30 if isinstance(vs30, (np.ndarray, np.generic) ) else np.array([vs30])
+    z1p0 = z1p0 if isinstance(z1p0, (np.ndarray, np.generic) ) else np.array([z1p0])
+    #convert region input to list
+    reg  = reg if isinstance(reg, (np.ndarray, np.generic, list) ) else [reg]
+    
+    #number of ground motions
+    n_gm = len(mag)
+    assert(len(ztor) == n_gm),'Error. Invalid number of ztor values'
+    assert(len(sof)  == n_gm),'Error. Invalid number of sof values'
+    assert(len(rrup) == n_gm),'Error. Invalid number of rrup values'
+    assert(len(vs30) == n_gm),'Error. Invalid number of vs30 values'
+    assert(len(reg)  == n_gm),'Error. Invalid number of reg values'
+
+    #convert regions to numpy array
+    regions = list(regions) if isinstance(regions, type({}.keys())) else regions
+    regions = np.array(regions) if type(regions) is list else regions
+    
+    #regionalized median scaling
+    flag_c1_reg = False if type(c1) is float or type(c1) is np.double else True
+    flag_c3_reg = False if type(c3) is float or type(c3) is np.double else True
+    flag_c7_reg = False if type(c7) is float or type(c7) is np.double else True
+    flag_c8_reg = False if type(c8) is float or type(c8) is np.double else True
+    #regionalized aleatory variability
+    flag_s1_reg = False if type(s1) is float or type(s1) is np.double else True
+    flag_s2_reg = False if type(s2) is float or type(s2) is np.double else True
+    flag_s3_reg = False if type(s3) is float or type(s3) is np.double else True
+    flag_s4_reg = False if type(s4) is float or type(s4) is np.double else True
+    flag_s5_reg = False if type(s5) is float or type(s5) is np.double else True
+    flag_s6_reg = False if type(s6) is float or type(s6) is np.double else True
+   
+    #add z1.0 break vs30
+    z1p0_vs30_brk = np.insert(z1p0_vs30_brk, 0, 0)
+    
+    #region id
+    reg_id = np.array([np.where(r==regions)[0] for r in reg]).flatten()
+    
+    #Intercept
+    f_intr = np.ones(mag.shape)
+    
+    #Source Scaling Terms
+    f_src_lin  = mag - 6.
+    f_src_fc   = 1.0 / cn * np.log(1 + np.exp(cn * (cmag - mag)))
+    f_src_ztor = np.minimum(ztor, ztor_max)
+    #sof scaling
+    f_src_n = (sof==-1).astype(float)
+    f_src_r = (sof==+1).astype(float)
+    
+    #Path Scaling Terms
+    #finte fault distance
+    M1 = np.maximum(mag - chm, 0)
+    H  = np.minimum( (b1 + b2 * M1 * np.exp(b3 * M1)), H_max)
+    #geometrical spreading
+    f_path_gs    = np.log(rrup + H)
+    f_path_gs   -= np.log(np.sqrt(rrup**2 + H_max**2))
+    #anelastic attenuation
+    f_path_atten = rrup  
+    #response adjustment
+    f_path_adj = -0.5 * np.log(np.sqrt(rrup**2 + H_max**2))
+    
+    #Site Scaling Terms
+    #vs30 scaling
+    f_site_vs30 = np.log(np.minimum(vs30, 1000.) / 800.)
+    #z1.0 scaling
+    z1p0_ref = calcBA19z1(vs30)
+    if flag_z1p0:
+        f_site_z1p0 = np.log((np.minimum(z1p0, 2) + 0.01) / (z1p0_ref + 0.01))
+        #index z1.0 break
+        j_brk_z1p0 = np.array([sum(z1p0_vs30_brk < v)-1 for v in vs30])
+        f_site_z1p0_mat = np.zeros( (n_gm, len(z1p0_vs30_brk)) )
+        for j, j_b in enumerate(j_brk_z1p0):
+            f_site_z1p0_mat[j,j_b] = f_site_z1p0[j]
+    
+    #Median Ground Motion
+    f_med   = (c1[reg_id] if flag_c1_reg else c1) * f_intr
+    #source scaling
+    f_src   = c2 * f_src_lin 
+    f_src  += (c2 - (c3[reg_id] if flag_c3_reg else c3)) * f_src_fc 
+    if abs(c9) > 1e-9: f_src  += c9 * f_src_ztor
+    f_src  += c10a * f_src_r + c10b * f_src_n
+    #path scaling
+    f_path  = c4 * f_path_gs
+    f_path += (c7[reg_id] if flag_c7_reg else c7) * f_path_atten + f_path_adj
+    #site scalign
+    f_site  = (c8[reg_id] if flag_c8_reg else c8) * f_site_vs30
+    if flag_z1p0:
+        f_site += f_site_z1p0_mat @ np.array([c11]).flatten()
+    #ground motion
+    f_med += f_src + f_path + f_site
+    
+    #Aleatory variability
+    s1_array = s1[reg_id] if flag_s1_reg else np.full(n_gm, s1) 
+    s2_array = s2[reg_id] if flag_s2_reg else np.full(n_gm, s2)
+    s3_array = s3[reg_id] if flag_s3_reg else np.full(n_gm, s3)
+    s4_array = s4[reg_id] if flag_s4_reg else np.full(n_gm, s4)
+    s5_array = s5[reg_id] if flag_s5_reg else np.full(n_gm, s5)
+    s6_array = s6[reg_id] if flag_s6_reg else np.full(n_gm, s6)
+    
+    #tau
+    tau  = np.array([np.interp(m, [s1mag, s2mag], [s1, s2], left=s1, right=s2) 
+                     for m, s1, s2 in zip(mag, s1_array, s2_array)])
+    #tauP
+    tauP = s3_array 
+    #phiS
+    phiS = s4_array
+    #phi
+    phi  = np.array([np.interp(m, [s5mag, s6mag], [s5, s6], left=s5, right=s6)
+                     for m, s5, s6 in zip(mag, s5_array, s6_array)])
+        
+    return f_med, f_src, f_path, f_site, tau, tauP, phiS, phi
+
 
 #%% Z1.0 scaling
 ### ------------------------------------------

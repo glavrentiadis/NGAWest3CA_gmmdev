@@ -70,6 +70,16 @@ data {
 transformed data{
   //between event path scaling
   vector[N] f_dBP = scl_dBP * (rrup - rrup_offset_dBP);
+
+  //magnitude-dependent aleatory standard dev
+  vector[NEQ] s_12;
+  vector[NEQ] s_56;
+  for (i in 1:NEQ) {
+    s_12[i]  = interp(s_1mag, s_2mag, s_1, s_2, mag[i]);
+    s_56[i]  = interp(s_5mag, s_6mag, s_5, s_6, mag[i]);
+  }
+  //constant aleatory standard dev
+  real s_3scl = s_3 / scl_dBP;  
 }
 
 parameters {
@@ -81,21 +91,6 @@ parameters {
 }
 
 transformed parameters {
-  //magnitude-dependent aleatory standard dev
-  vector[NEQ] tau0;
-  vector[NEQ] phi0;
-  for (i in 1:NEQ) {
-    tau0[i]  = interp(s_1mag, s_2mag, s_1, s_2, mag[i]);
-    phi0[i]  = interp(s_5mag, s_6mag, s_5, s_6, mag[i]);
-  }
-  //constant aleatory standard dev
-  real tauP = s_3;
-  real phiS = s_4;  
-  real tauP_scl = s_2 / scl_dBP;
-  
-  //between-event-path random effects
-  vector[NEQ] deltaBP = scl_dBP * deltaBP_scl;
-  
   //within-event terms
   vector[N] deltaWS = Y - (deltaB[eq] + f_dBP .* deltaBP_scl[eq] + deltaS[sta]);
 }
@@ -104,22 +99,22 @@ model {
   //random effects - priors
   //------------------------------------
   //earthquake dependent random effects
-  deltaB      ~ normal(0., tau0);
-  deltaBP_scl ~ normal(0., tauP_scl);
+  deltaB      ~ normal(0., s_12);
+  deltaBP_scl ~ normal(0., s_3scl);
   //site dependent random effects
-  deltaS      ~ normal(0., phiS);
+  deltaS      ~ normal(0., s_4);
 
   //likelihood function
   //------------------------------------
-  deltaWS ~ normal(0., phi0[eq]);
+  deltaWS ~ normal(0., s_56[eq]);
 
   //standardized random effects
   //------------------------------------
-  vector[NEQ]  epsB  = deltaB  ./ tau0;
-  vector[NSTA] epsS  = deltaS   / phiS;
-  vector[N]    epsWS = deltaWS ./ phi0[eq];
+  vector[NEQ]  epsB  = deltaB  ./ s_12;
+  vector[NSTA] epsS  = deltaS   / s_4;
+  vector[N]    epsWS = deltaWS ./ s_56[eq];
   //standardized effects of scaled terms
-  vector[NEQ]  epsBP = deltaBP_scl / tauP_scl;
+  vector[NEQ]  epsBP = deltaBP_scl / s_3scl;
 
   //penalty terms (soft constraint)
   //------------------------------------
@@ -134,3 +129,21 @@ model {
   // rep_array(calc_emp_std(epsS,  0), NSTA) ~ normal(1., 1/lambda);
   // rep_array(calc_emp_std(epsWS, 0), N)    ~ normal(1., 1/lambda);
 }
+
+generated quantities {
+  //between-event-path random effects
+  vector[NEQ] deltaBP = scl_dBP * deltaBP_scl;
+
+  //magnitude-dependent aleatory standard dev
+  vector[NEQ] tau0;
+  vector[NEQ] phi0;
+  for (i in 1:NEQ) {
+    tau0[i]  = interp(s_1mag, s_2mag, s_1, s_2, mag[i]);
+    phi0[i]  = interp(s_5mag, s_6mag, s_5, s_6, mag[i]);
+  }
+  //constant aleatory standard dev
+  real tauP = s_3;
+  real phiS = s_4;  
+  real tauP_scl = s_3 / scl_dBP;
+}
+

@@ -105,7 +105,8 @@ def figures_residuals(df_summary_gm, df_summary_eq, df_summary_st,
         ax.grid(which='both')
         ax.tick_params(axis='x', labelsize=30)
         ax.tick_params(axis='y', labelsize=30)
-        ax.set_ylim([-3, 3])
+        ax.set_xlim([3.,8.5])
+        ax.set_ylim([-3.,3.])
         ax.set_yticks([-3.,-1.5,0.,1.5,3.])
         fig.tight_layout()
         fig.savefig(dir_fig+fname_fig+'.png', bbox_inches='tight')
@@ -135,6 +136,7 @@ def figures_residuals(df_summary_gm, df_summary_eq, df_summary_st,
         ax.grid(which='both')
         ax.tick_params(axis='x', labelsize=30)
         ax.tick_params(axis='y', labelsize=30)
+        ax.set_xlim([3.,8.5])
         # ax.set_ylim([-3, 3])
         # ax.set_yticks([-3.,-1.5,0,1.5,3.])
         ax.set_ylim([-1.5, 1.5])
@@ -166,8 +168,8 @@ def figures_residuals(df_summary_gm, df_summary_eq, df_summary_st,
         ax.grid(which='both')
         ax.tick_params(axis='x', labelsize=30)
         ax.tick_params(axis='y', labelsize=30)
-        ax.set_xlim([100, 2500])
-        ax.set_ylim([-3, 3])
+        ax.set_xlim([100., 2500.])
+        ax.set_ylim([-3., 3.])
         ax.set_yticks([-3.,-1.5,0.,1.5,3.])
         fig.tight_layout()
         fig.savefig(dir_fig+fname_fig+'.png', bbox_inches='tight')
@@ -197,10 +199,14 @@ def figures_residuals(df_summary_gm, df_summary_eq, df_summary_st,
         ax[0].grid(which='both')
         ax[0].tick_params(axis='x', labelsize=30)
         ax[0].tick_params(axis='y', labelsize=30)
-        # ax[0].set_ylim([-3, 3])
-        ax[0].set_ylim([-4, 4])
-        # ax[0].set_yticks([-3.,-1.5,0.,1.5,3.])
-        ax[0].set_yticks([-4.,-2.,0.,2.,4.])
+        ax[0].set_xlim([3.,8.5])
+        ax[0].set_ylim([-3., 3.])
+        # ax[0].set_ylim([-4, 4])
+        # ax[0].set_ylim([-5, 5])
+        ax[0].set_yticks([-3.,-1.5,0.,1.5,3.])
+        # ax[0].set_yticks([-4.,-2.,0.,2.,4.])
+        # ax[0].set_yticks([-5.,-2.5,0.,2.5,5.])
+
         #within-event-site (rrup scaling)
         for j, rid in enumerate(np.unique(df_summary_gm_reg.regid)):
             #region points
@@ -221,10 +227,14 @@ def figures_residuals(df_summary_gm, df_summary_eq, df_summary_st,
         ax[1].grid(which='both')
         ax[1].tick_params(axis='x', labelsize=30)
         ax[1].tick_params(axis='y', labelsize=30)
-        # ax[1].set_ylim([-3, 3])
-        ax[1].set_ylim([-4, 4])
-        # ax[1].set_yticks([-3.,-1.5,0.,1.5,3.])
-        ax[1].set_yticks([-4.,-2.,0.,2.,4.])
+        ax[1].set_xlim([0.1, 400.])
+        ax[1].set_ylim([-3., 3.])
+        # ax[1].set_ylim([-4, 4])
+        # ax[1].set_ylim([-5, 5])
+        ax[1].set_yticks([-3.,-1.5,0.,1.5,3.])
+        # ax[1].set_yticks([-4.,-2.,0.,2.,4.])
+        # ax[1].set_yticks([-5.,-2.5,0.,2.5,5.])
+        
         #within-event-site (vs30 scaling)
         for j, rid in enumerate(np.unique(df_summary_gm_reg.regid)):
             #region points
@@ -245,11 +255,13 @@ def figures_residuals(df_summary_gm, df_summary_eq, df_summary_st,
         ax[2].grid(which='both')
         ax[2].tick_params(axis='x', labelsize=30)
         ax[2].tick_params(axis='y', labelsize=30)
-        ax[2].set_xlim([100, 2500])
-        ax[2].set_ylim([-3, 3])
+        ax[2].set_xlim([100., 2500.])
+        ax[2].set_ylim([-3., 3.])
         # ax[2].set_ylim([-4, 4])
-        # ax[2].set_yticks([-3.,-1.5,0.,1.5,3.])
-        ax[2].set_yticks([-4.,-2.,0.,2.,4.])
+        # ax[2].set_ylim([-5, 5])
+        ax[2].set_yticks([-3.,-1.5,0.,1.5,3.])
+        # ax[2].set_yticks([-4.,-2.,0.,2.,4.])
+        # ax[2].set_yticks([-5.,-2.5,0.,2.5,5.])
         fig.tight_layout()
         fig.savefig(dir_fig+fname_fig+'.png', bbox_inches='tight')
         plt.close(fig)
@@ -356,7 +368,7 @@ def figures_residuals(df_summary_gm, df_summary_eq, df_summary_st,
         #deltaB
         data2plot = df_summary_gm.loc[i_r,['stlat','stlon',cn_dWS]].values
         #plot figure
-        fig, ax, cbar, data_crs, gl = pycplt.PlotScatterCAMap(data2plot, cmin=-4.0, cmax=4.0, flag_grid=False, 
+        fig, ax, cbar, data_crs, gl = pycplt.PlotScatterCAMap(data2plot, cmin=-5.0, cmax=5.0, flag_grid=False, 
                                                               title=None, cbar_label='', log_cbar = False, 
                                                               frmt_clb = '%.2f', alpha_v = 0.7, cmap='seismic', 
                                                               marker_size=70.)
@@ -375,4 +387,274 @@ def figures_residuals(df_summary_gm, df_summary_eq, df_summary_st,
         fig.savefig( dir_fig + fname_fig + '.png', bbox_inches='tight')
         plt.close(fig)
         
+    return None
+
+
+def figures_residuals_adjust(df_adjusted_gm, df_adjusted_eq, df_adjusted_st,
+                             df_original_gm, df_original_eq, df_original_st,
+                             cn_dB, cn_dBP, cn_dS, cn_dWS, scl_dBP=1.,
+                             cn_tau0='tau0', cn_tauP='tauP', cn_phi0='phi0',
+                             resid_range=[-3., 3.],
+                             fig_title=None,
+                             dir_fig='./', fname_main_out='gmm_residuals',
+                             flag_synthetic=False):
+
+    #color map
+    cmap = plt.get_cmap("tab10")
+
+    #number of groundmotions, events, and stations
+    n_gm = len(df_adjusted_gm)
+    n_eq = len(df_adjusted_eq)
+    n_st = len(df_adjusted_st)
+    assert(len(df_original_gm)==n_gm),'Error. Inconsistent number of ground motions'
+    assert(len(df_original_eq)==n_eq),'Error. Inconsistent number of events'
+    assert(len(df_original_st)==n_st),'Error. Inconsistent number of stations'
+    
+    # Residual Scatter
+    # ---   ---   ---   ---   ---
+    #between event
+    fname_fig = (fname_main_out + '_deltaB_scatter').replace(' ','_')
+    fig, ax = plt.subplots(figsize = (10,10))
+    hl0 = ax.plot(resid_range, resid_range, linewidth=2, color='k')
+    #comparison regression residuals
+    hl1 = ax.plot(df_original_eq[cn_dB[1]], df_adjusted_eq[cn_dB[0]], 'o', markersize=4)
+    #edit properties
+    ax.set_xlabel(r'Prescribed' if flag_synthetic else r'$\delta B_{Step~1}$', fontsize=30)
+    ax.set_ylabel(r'Estimated'  if flag_synthetic else r'$\delta B_{Step~2}$', fontsize=30)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+    if not fig_title is None: ax.set_title(fig_title+r'mBetween Event Residual Comparision', fontsize=30)
+    ax.grid(which='both')
+    ax.tick_params(axis='x', labelsize=25)
+    ax.tick_params(axis='y', labelsize=25)
+    ax.set_ylim(resid_range)
+    ax.set_xlim(resid_range)
+    #save figure
+    fig.tight_layout()
+    fig.savefig( dir_fig + fname_fig + '.png', bbox_inches='tight')
+    plt.close(fig)
+
+    #between event-path
+    fname_fig = (fname_main_out + '_deltaBP_scatter').replace(' ','_')
+    fig, ax = plt.subplots(figsize = (10,10))
+    hl0 = ax.plot(resid_range, resid_range, linewidth=2, color='k')
+    #comparison regression residuals
+    hl1 = ax.plot(1./scl_dBP*df_original_eq[cn_dBP[1]], 1./scl_dBP*df_adjusted_eq[cn_dBP[0]], 'o', markersize=4)
+    #edit properties
+    ax.set_xlabel(r'Prescribed' if flag_synthetic else r'$\delta BP_{Step~1}$', fontsize=30)
+    ax.set_ylabel(r'Estimated'  if flag_synthetic else r'$\delta BP_{Step~2}$', fontsize=30)                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                            
+    if not fig_title is None: ax.set_title(fig_title+r'Between Event-Path Residual Comparision', fontsize=30)
+    ax.grid(which='both')
+    ax.tick_params(axis='x', labelsize=25)
+    ax.tick_params(axis='y', labelsize=25)
+    ax.set_ylim(resid_range)
+    ax.set_xlim(resid_range)
+    #save figure
+    fig.tight_layout()
+    fig.savefig( dir_fig + fname_fig + '.png', bbox_inches='tight')
+    plt.close(fig)   
+    
+    #between site
+    fname_fig = (fname_main_out + '_deltaS_scatter').replace(' ','_')
+    fig, ax = plt.subplots(figsize = (10,10))
+    hl0 = ax.plot(resid_range, resid_range, linewidth=2, color='k')
+    #comparison regression residuals
+    hl1 = ax.plot(df_original_st[cn_dS[1]], df_adjusted_st[cn_dS[0]], 'o', markersize=4)
+    #edit properties
+    ax.set_xlabel(r'Prescribed' if flag_synthetic else r'$\delta S_{Step~1}$', fontsize=30)
+    ax.set_ylabel(r'Estimated'  if flag_synthetic else r'$\delta S_{Step~2}$', fontsize=30)   
+    if not fig_title is None: ax.set_title(fig_title+r'Between Site Residual Comparision', fontsize=30)
+    ax.grid(which='both')
+    ax.tick_params(axis='x', labelsize=25)
+    ax.tick_params(axis='y', labelsize=25)
+    ax.set_ylim(resid_range)
+    ax.set_xlim(resid_range)
+    #save figure
+    fig.tight_layout()
+    fig.savefig( dir_fig + fname_fig + '.png', bbox_inches='tight')
+    plt.close(fig)
+
+    #within event site
+    fname_fig = (fname_main_out + '_deltaWS_scatter').replace(' ','_')
+    fig, ax = plt.subplots(figsize = (10,10))
+    hl0 = ax.plot(resid_range, resid_range, linewidth=2, color='k')
+    #comparison regression residuals
+    hl1 = ax.plot(df_original_gm[cn_dWS[1]], df_adjusted_gm[cn_dWS[0]], 'o', markersize=4)
+    #edit properties
+    ax.set_xlabel(r'Prescribed' if flag_synthetic else r'$\delta WS_{Step~1}$', fontsize=30)
+    ax.set_ylabel(r'Estimated'  if flag_synthetic else r'$\delta WS_{Step~2}$', fontsize=30)   
+    if not fig_title is None: ax.set_title(fig_title+r'Within Event-Site Residual Comparision', fontsize=30)
+    ax.grid(which='both')
+    ax.tick_params(axis='x', labelsize=25)
+    ax.tick_params(axis='y', labelsize=25)
+    ax.set_ylim(resid_range)
+    ax.set_xlim(resid_range)
+    #save figure
+    fig.tight_layout()
+    fig.savefig( dir_fig + fname_fig + '.png', bbox_inches='tight')
+    plt.close(fig)
+
+    # Residual Sensitivity
+    # ---   ---   ---   ---   ---
+    n_rec_eq_max = 500 * np.ceil(max(df_adjusted_eq.eventcnt) / 500)
+    n_rec_st_max = 50  * np.ceil(max(df_adjusted_st.stationcnt) / 50)
+    # n_rec_eq_max = 10 ** np.ceil(np.log10(max(df_adjusted_eq.eventcnt)))
+    # n_rec_st_max = 10 ** np.ceil(np.log10(max(df_adjusted_st.stationcnt)))
+    
+    #between event
+    fname_fig = (fname_main_out + '_deltaB_sensitivity').replace(' ','_')
+    fig, ax = plt.subplots(figsize = (10,10))
+    hl0 = ax.plot([0,n_rec_eq_max], [0,0], linewidth=2, color='k')
+    hl1 = ax.plot(df_adjusted_eq.eventcnt, df_adjusted_eq[cn_dB[0]]-df_original_eq[cn_dB[1]], 
+                  'o', markersize=6, label='Mean')
+    hl2 = ax.errorbar(df_adjusted_eq.eventcnt, df_adjusted_eq[cn_dB[0]]-df_original_eq[cn_dB[1]], 
+                      yerr=df_original_eq[cn_dB[2]],
+                      capsize=4, fmt='none', 
+                      ecolor=hl1[0].get_color(), label='16/84 Percentile')
+    #edit properties
+    ax.set_xlabel(r'Number of records per event', fontsize=30)
+    if flag_synthetic: ax.set_ylabel(r'Difference (Estimated-Prescribed)',         fontsize=30)
+    else:              ax.set_ylabel(r'$\delta B_{Step~1} - \delta B_{Step~2}$',   fontsize=30)
+    ax.legend(loc='lower right', fontsize=30)
+    if not fig_title is None: ax.set_title(fig_title+r'Between Event Residual Sensitivity', fontsize=30)
+    ax.grid(which='both')
+    ax.tick_params(axis='x', labelsize=25)
+    ax.tick_params(axis='y', labelsize=25)
+    ax.set_xlim([0,n_rec_eq_max])
+    ax.set_ylim(resid_range)
+    #save figure
+    fig.tight_layout()
+    fig.savefig( dir_fig + fname_fig + '.png', bbox_inches='tight')
+    plt.close(fig)
+    
+    #between event path
+    fname_fig = (fname_main_out + '_deltaBP_sensitivity').replace(' ','_')
+    fig, ax = plt.subplots(figsize = (10,10))
+    hl0 = ax.plot([0,n_rec_eq_max], [0,0], linewidth=2, color='k')
+    hl1 = ax.plot(df_adjusted_eq.eventcnt, 1./scl_dBP*(df_adjusted_eq[cn_dBP[0]]-df_original_eq[cn_dBP[1]]), 
+                  'o', markersize=6, label='Mean')
+    hl2 = ax.errorbar(df_adjusted_eq.eventcnt, 1./scl_dBP*(df_adjusted_eq[cn_dBP[0]]-df_original_eq[cn_dBP[1]]), 
+                      yerr=1./scl_dBP*df_original_eq[cn_dBP[2]],
+                      capsize=4, fmt='none', 
+                      ecolor=hl1[0].get_color(), label='16/84 Percentile')
+    #edit properties
+    ax.set_xlabel(r'Number of records per event', fontsize=30)
+    if flag_synthetic: ax.set_ylabel(r'Difference (Estimated-Prescribed)',         fontsize=30)
+    else:              ax.set_ylabel(r'$\delta BP_{Step~1} - \delta BP_{Step~2}$', fontsize=30)
+    ax.legend(loc='lower right', fontsize=30)
+    if not fig_title is None: ax.set_title(fig_title+r'\Between Event-Path Residual Sensitivity', fontsize=30)
+    ax.grid(which='both')
+    ax.tick_params(axis='x', labelsize=25)
+    ax.tick_params(axis='y', labelsize=25)
+    ax.set_xlim([0,n_rec_eq_max])
+    ax.set_ylim(resid_range)
+    #save figure
+    fig.tight_layout()
+    fig.savefig( dir_fig + fname_fig + '.png', bbox_inches='tight')
+    plt.close(fig)    
+    
+    #between site
+    fname_fig = (fname_main_out + '_deltaS_sensitivity').replace(' ','_')
+    fig, ax = plt.subplots(figsize = (10,10))
+    hl0 = ax.plot([0,n_rec_st_max], [0,0], linewidth=2, color='k')
+    hl1 = ax.plot(df_adjusted_st.stationcnt, df_adjusted_st[cn_dS[0]]-df_original_st[cn_dS[1]], 
+                  'o', markersize=6, label='Mean')
+    hl2 = ax.errorbar(df_adjusted_st.stationcnt, df_adjusted_st[cn_dS[0]]-df_original_st[cn_dS[1]], 
+                      yerr=df_original_st[cn_dS[2]],
+                      capsize=4, fmt='none', 
+                      ecolor=hl1[0].get_color(), label='16/84 Percentile')
+    #edit properties
+    ax.set_xlabel(r'Number of records per station', fontsize=30)
+    if flag_synthetic: ax.set_ylabel(r'Difference (Estimated-Prescribed)',       fontsize=30)
+    else:              ax.set_ylabel(r'$\delta S_{Step~1} - \delta S_{Step~2}$', fontsize=30)
+    ax.legend(loc='lower right', fontsize=30)
+    if not fig_title is None: ax.set_title(fig_title+r'\Between Site Residual Sensitivity', fontsize=30)
+    ax.grid(which='both')
+    ax.tick_params(axis='x', labelsize=25)
+    ax.tick_params(axis='y', labelsize=25)
+    ax.set_xlim([0,n_rec_st_max])
+    ax.set_ylim(resid_range)
+    #save figure
+    fig.tight_layout()
+    fig.savefig( dir_fig + fname_fig + '.png', bbox_inches='tight')
+    plt.close(fig)  
+    
+    # Standard Deviation Comparison
+    # ---   ---   ---   ---   ---
+    #compute normalized random terms    
+    epsB  = df_adjusted_eq[cn_dB[0]].values  / df_adjusted_eq[cn_tau0].values   
+    epsBP = df_adjusted_eq[cn_dBP[0]].values / df_adjusted_eq[cn_tauP].values
+    epsS  = df_adjusted_st[cn_dS[0]].values  / df_adjusted_st[cn_phi0].values
+    #event and station counts
+    cntEq = df_adjusted_eq.eventcnt.values
+    cntSt = df_adjusted_st.stationcnt.values
+    
+    #count bins
+    cnt4cmp = [[1,2],[2,5],[5,15],[15,25],[25,50],[50,100],[100,10000]]
+    cnt4cmp_lgd = ['%i-%i'%(c4cmp[0], c4cmp[1]) for c4cmp in cnt4cmp ] 
+    
+    #epsB
+    epsB_binned_std  = [ np.std( epsB[np.logical_and(c4cmp[0]<=cntEq, cntEq<c4cmp[1])] )  for c4cmp in cnt4cmp ]
+    epsB_binned_cnt  = [ np.sum( np.logical_and(c4cmp[0]<=cntEq, cntEq<c4cmp[1]) )        for c4cmp in cnt4cmp ]
+    #epsBP
+    epsBP_binned_std = [ np.std( epsBP[np.logical_and(c4cmp[0]<=cntEq, cntEq<c4cmp[1])] ) for c4cmp in cnt4cmp ]
+    epsBP_binned_cnt = [ np.sum( np.logical_and(c4cmp[0]<=cntEq, cntEq<c4cmp[1]) )        for c4cmp in cnt4cmp ]
+    #epsS
+    epsS_binned_std  = [ np.std( epsS[np.logical_and(c4cmp[0]<=cntSt, cntSt<c4cmp[1])] )  for c4cmp in cnt4cmp ]
+    epsS_binned_cnt  = [ np.sum( np.logical_and(c4cmp[0]<=cntSt, cntSt<c4cmp[1]) )        for c4cmp in cnt4cmp ]
+    
+    #between event
+    fig, ax = plt.subplots(figsize = (17,10), nrows=2)
+    hl0 = ax[0].plot( [-1,len(cnt4cmp)],  np.full(2,1.), linewidth=2, color='k')
+    hl1 = ax[0].plot( range(len(cnt4cmp)), epsB_binned_std, 'o', markersize=6)
+    #edit properties
+    ax[0].grid(which='both')
+    ax[0].set_xlim([-1,len(cnt4cmp)])
+    ax[0].set_ylim([0,1.5])
+    ax[0].set_xticks(range(len(cnt4cmp)))
+    ax[0].set_xticklabels([])
+    ax[0].tick_params(axis='x', labelsize=25)
+    ax[0].tick_params(axis='y', labelsize=25)
+    ax[0].legend(loc='lower right', fontsize=30)
+    ax[0].set_ylabel('Empirical\nStandard Deviation',  fontsize=30)
+    if not fig_title is None: ax.set_title(fig_title+r'\Between Event Residual', fontsize=30)
+    #number of data points
+    ax[1].bar(range(len(cnt4cmp)),  epsB_binned_cnt)
+    #edit properties
+    ax[1].grid(which='both')
+    ax[1].set_xlim([-1,len(cnt4cmp)])
+    ax[1].set_xticks(range(len(cnt4cmp)))
+    ax[1].set_xticklabels(['%i-%i'%(c[0], c[1]) for c in cnt4cmp ] )
+    ax[1].set_xlabel(r'Bin size (Number of Events)', fontsize=30)
+    ax[1].set_ylabel(r'Sample size',  fontsize=30)
+    ax[1].tick_params(axis='x', labelsize=25)
+    ax[1].tick_params(axis='y', labelsize=25)
+    fig.tight_layout()
+    
+    #between event-path
+    fig, ax = plt.subplots(figsize = (17,10), nrows=2)
+    hl0 = ax[0].plot( [-1,len(cnt4cmp)],  np.full(2,1.), linewidth=2, color='k')
+    hl1 = ax[0].plot( range(len(cnt4cmp)), epsBP_binned_std, 'o', markersize=6)
+    #edit properties
+    ax[0].grid(which='both')
+    ax[0].set_xlim([-1,len(cnt4cmp)])
+    ax[0].set_ylim([0,1.5])
+    ax[0].set_xticks(range(len(cnt4cmp)))
+    ax[0].set_xticklabels([])
+    ax[0].tick_params(axis='x', labelsize=25)
+    ax[0].tick_params(axis='y', labelsize=25)
+    ax[0].legend(loc='lower right', fontsize=30)
+    ax[0].set_ylabel('Empirical\nStandard Deviation',  fontsize=30)
+    if not fig_title is None: ax.set_title(fig_title+r'\Between Event-Path Residual', fontsize=30)
+    #number of data points
+    ax[1].bar(range(len(cnt4cmp)),  epsBP_binned_cnt)
+    #edit properties
+    ax[1].grid(which='both')
+    ax[1].set_xlim([-1,len(cnt4cmp)])
+    ax[1].set_xticks(range(len(cnt4cmp)))
+    ax[1].set_xticklabels(['%i-%i'%(c[0], c[1]) for c in cnt4cmp ] )
+    ax[1].set_xlabel(r'Bin size (Number of Events)', fontsize=30)
+    ax[1].set_ylabel(r'Sample size',  fontsize=30)
+    ax[1].tick_params(axis='x', labelsize=25)
+    ax[1].tick_params(axis='y', labelsize=25)
+    fig.tight_layout()
+    
     return None

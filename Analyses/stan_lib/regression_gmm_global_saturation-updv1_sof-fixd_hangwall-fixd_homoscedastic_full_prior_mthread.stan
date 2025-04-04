@@ -105,7 +105,7 @@ functions {
     f_med += c_8 * f_vs30[st_slice];
   
     //evaluate likelihood
-    return normal_lpdf(Y_slice | f_med - (deltaB[eq_slice] + f_dBP[start:end] .* deltaBP_scl[eq_slice] + deltaS[st_slice]), phi0 );
+    return normal_lpdf(Y_slice | f_med + (deltaB[eq_slice] + f_dBP[start:end] .* deltaBP_scl[eq_slice] + deltaS[st_slice]), phi0 );
   }
   
   //median ground motion

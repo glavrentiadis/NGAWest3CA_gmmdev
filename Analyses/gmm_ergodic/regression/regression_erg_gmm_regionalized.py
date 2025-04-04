@@ -30,7 +30,7 @@ import ipywidgets
 import cmdstanpy
 #user libraries
 sys.path.insert(0,'../../python_lib')
-from pylib_gmm import gmm_eas, gmm_eas_upd
+from pylib_gmm import gmm_eas, gmm_eas_updv1, gmm_eas_updv2
 from pylib_gmm import scalingHW as scaling_hw
 from moving_mean import movingmean
 from pylib_gmm_plots import figures_residuals
@@ -69,8 +69,6 @@ reg2process = ('ALL')
 # reg2process = ('PW','SEE','CH','JPN','TWN')
 # reg2process = ('PW','AK','SEE','CH','JPN','TWN')
 
-#max depth rupture
-ztor_max = 20
 #scaling path term
 scl_atten = 0.01
 scl_dBP   = 0.01
@@ -88,22 +86,18 @@ n_iter = 200000
 #chain iterations
 # n_iter_warmup   = 20000
 # n_iter_sampling = 10000
-# n_iter_warmup   = 1000
-# n_iter_sampling = 1000
-n_iter_warmup   = 500
-n_iter_sampling = 500
+n_iter_warmup   = int(os.getenv('N_ITER')) if not os.getenv('N_ITER') is None else 1000
+n_iter_sampling = 4*int(os.getenv('N_ITER')) if not os.getenv('N_ITER') is None else 2000
 # n_iter_warmup   = 300
 # n_iter_sampling = 300
 # n_iter_warmup   = 250
 # n_iter_sampling = 250
-# n_iter_warmup   = 150
-# n_iter_sampling = 150
 # n_iter_warmup   = 50
 # n_iter_sampling = 50
-# n_iter_warmup   = 20
-# n_iter_sampling = 20
 # n_iter_warmup   = 10
 # n_iter_sampling = 10
+# n_iter_warmup   = 5
+# n_iter_sampling = 5
 #parameters
 n_chains        = int(os.getenv('N_CHAINS')) if not os.getenv('N_CHAINS') is None else 6
 adapt_delta     = float(os.getenv('ALPHA_DELTA')) if not os.getenv('ALPHA_DELTA') is None else 0.8
@@ -113,27 +107,39 @@ flag_mthread  = bool(int(os.getenv('FLAG_MTHREAD'))) if not os.getenv('FLAG_MTHR
 threads_chain = int(os.getenv('THREADS_CHAIN')) if not os.getenv('THREADS_CHAIN') is None else 2
 
 #flag production
-flag_production = bool(int(os.getenv('FLAG_PROD'))) if not os.getenv('FLAG_PROD') is None else False
+flag_production = bool(int(os.getenv('FLAG_PROD'))) if not os.getenv('FLAG_PROD') is None else True
+#production flatfile
+if flag_production:
+    opt_prdflt  = int(os.getenv('OPT_FLT')) if not os.getenv('OPT_FLT') is None else 1
 #random realization
 verif_rlz = int(os.getenv('VERIF_RLZ')) if not os.getenv('VERIF_RLZ') is None else 1
+
+#flag regionalization
+flag_regionalized = bool(int(os.getenv('FLAG_REG'))) if not os.getenv('FLAG_REG') is None else False
 
 #flag heteroscedasticity
 flag_heteroscedastic = bool(int(os.getenv('FLAG_HETERO'))) if not os.getenv('FLAG_HETERO') is None else True
 
-#flag updated short distance saturation
-flag_upd_saturation = bool(int(os.getenv('FLAG_UPD_ST'))) if not os.getenv('FLAG_UPD_ST') is None else True
+#option short distance saturation
+opt_saturation = int(os.getenv('OPT_SD_SATUR')) if not os.getenv('OPT_SD_SATUR') is None else 2
 
 #flag hanging wall scaling
-flag_hangingwall = bool(int(os.getenv('FLAG_HW'))) if not os.getenv('FLAG_HW') is None else True
+flag_style_fault = (str(os.getenv('FLAG_SOF')) if not os.getenv('FLAG_SOF') is None else 'fixed').lower()
+
+#flag hanging wall scaling
+flag_hanging_wall = (str(os.getenv('FLAG_HW')) if not os.getenv('FLAG_HW') is None else 'fixed').lower()
 
 #non-linear option
-flag_nl = bool(int(os.getenv('FLAG_NL'))) if not os.getenv('FLAG_NL') is None else True
+if flag_production:
+    flag_nl = bool(int(os.getenv('FLAG_NL'))) if not os.getenv('FLAG_NL') is None else True
+else:
+    flag_nl = False
 
 #response variable
 freq = float(os.getenv('FREQ')) if not os.getenv('FREQ') is None else 5.011872
 # freq = float(os.getenv('FREQ')) if not os.getenv('FREQ') is None else 1.0
 if os.getenv('NAME_Y') is None:
-    n_y = 'eas_f%.9fhz'%freq if not flag_nl else 'easln_f%.9fhz'%freq
+    n_y = 'eas_f%.9fhz'%freq if not (flag_nl or flag_production) else 'easln_f%.9fhz'%freq
 else:
     n_y = os.getenv('NAME_Y')
 
@@ -145,84 +151,111 @@ else:
 
 #filename flatfile
 if flag_production:
-    # fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240920_censored.csv'
-    # fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240920_all.csv'
-    # fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20241116_censored.csv'
-    fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20241205_censored.csv'
+    if opt_prdflt==1:
+        # fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240920_censored.csv'
+        # fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20240920_all.csv'
+        # fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20241116_censored.csv'
+        # fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20241205_censored.csv'
+        # fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20241219_censored.csv'
+        fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20250203_censored.csv'
+    elif opt_prdflt==2:
+        fn_fltfile = '../../../Data/gmm_ergodic/dataset/fltfile_nga3_20241219_censored-karen.csv'
+    else:
+        assert(False),"Unavailable production flatfile."
 else:
     fn_fltfile  = '../../../Data/gmm_ergodic/verification/dataset/'
-    fn_fltfile += 'updated_saturation/' if flag_upd_saturation else 'original_saturation/'
-    fn_fltfile += 'heteroscedastic' if flag_heteroscedastic else 'homoscedastic'
-    fn_fltfile += '_hangwall/' if flag_hangingwall else '/'
+    fn_fltfile += 'regional_' if flag_regionalized else 'global_'
+    if   opt_saturation == 0: fn_fltfile += 'original_saturation'
+    elif opt_saturation == 1: fn_fltfile += 'updated-v1_saturation'
+    elif opt_saturation == 2: fn_fltfile += 'updated-v2_saturation'
+    else: assert(False),"Unavailable short distance saturation."
+    fn_fltfile += '_hangwall' if flag_hanging_wall == 'fixed' or flag_hanging_wall == 'free' else ''
+    fn_fltfile += '_heteroscedastic/' if flag_heteroscedastic else '_homoscedastic/'
     fn_fltfile += 'fltfile_rlz%i.csv'%verif_rlz 
 
 #filename coefficients prior
-if flag_upd_saturation:
-    #filename updated gmm coefficients
-    fn_coeffs_prior = '../../../Raw_files/model_coeffs/coeff_20241021_mod3.csv'
-else:
+if opt_saturation == 0:
     #filename BA18 coefficients
     fn_coeffs_prior = '../../../Raw_files/BA18coefs_mod.csv'
-
+elif opt_saturation == 1:
+    #filename updated gmm coefficients
+    # fn_coeffs_prior = '../../../Raw_files/model_coeffs/coeff_20241021_mod3.csv'
+    # fn_coeffs_prior = '../../../Data/gmm_ergodic/preprocessing/eas_coefs_origin.csv'
+    fn_coeffs_prior = '../../../Data/gmm_ergodic/preprocessing/gmm_eas_upd_satur-v1_coeffs_smoothed.csv'
+elif opt_saturation == 2:
+    fn_coeffs_prior = '../../../Data/gmm_ergodic/preprocessing/gmm_eas_upd_satur-v2_coeffs_smoothed.csv'
+else:
+    assert(False),"Unavailable short distance saturation."
+    
 #stan model
 dir_stan_model = '../../stan_lib/'
 # dir_stan_cmpl  = dir_stan_model  + 'compiled/%s/'%(exec_time)
 dir_stan_cmpl  = dir_stan_model  + 'compiled/%s_%s/'%(machine_name, exec_time)
-if flag_upd_saturation:
-    if not flag_heteroscedastic:
-        if not flag_hangingwall:
-            if not flag_mthread:
-                fname_stan_model = 'regression_gmm_glob_regionalized_homoscedastic_upd_saturation_full_prior'
-            else:
-                fname_stan_model = 'regression_gmm_glob_regionalized_homoscedastic_upd_saturation_full_prior_mthread'
-        else:
-            assert(False),"Unimplemented method."
-    else:
-        if not flag_hangingwall:
-            if not flag_mthread:
-                fname_stan_model = 'regression_gmm_glob_regionalized_heteroscedastic_upd_saturation_full_prior'
-            else:
-                fname_stan_model = 'regression_gmm_glob_regionalized_heteroscedastic_upd_saturation_full_prior_mthread'
-        else:
-            if not flag_mthread:
-                fname_stan_model = 'regression_gmm_glob_regionalized_heteroscedastic_upd_saturation_hangwall_full_prior'
-            else:
-                fname_stan_model = 'regression_gmm_glob_regionalized_heteroscedastic_upd_saturation_hangwall_full_prior_mthread'
+#regression file name
+fname_stan_model  = 'regression_gmm'
+fname_stan_model += '_reglzd'   if flag_regionalized  else '_global'
+if   opt_saturation == 0: fname_stan_model += '_saturation-orign'
+elif opt_saturation == 1: fname_stan_model += '_saturation-updv1'
+elif opt_saturation == 2: fname_stan_model += '_saturation-updv2'
+else: assert(False),"Unavailable short distance saturation."
+fname_stan_model += '_sof-free' if flag_style_fault == 'free' else '_sof-fixd'
+#hanging wall 
+if flag_hanging_wall == 'omit':
+    fname_stan_model += '_hangwall-omit'
+elif flag_hanging_wall == 'free':
+    fname_stan_model += '_hangwall-free'
+elif flag_hanging_wall == 'fixed':
+    fname_stan_model += '_hangwall-fixd'
 else:
-    assert( not (flag_hangingwall or flag_mthread)),"Unimplemented method."
-    if not flag_heteroscedastic:
-        fname_stan_model = 'regression_gmm_glob_regionalized_homoscedastic_full_prior'
-    else:
-        fname_stan_model = 'regression_gmm_glob_regionalized_heteroscedastic_full_prior'
+    raise ValueError('Unspecified hanging wall option: %s'%flag_hanging_wall)
+#standard deviation model
+fname_stan_model += '_heteroscedastic' if flag_heteroscedastic else '_homoscedastic'
+#bayesian vs mle
+fname_stan_model += '_full_prior' if flag_mcmc else '_mle'
+#multi-threading option
+fname_stan_model += '_mthread' if flag_mthread else ''
+
+#verify regression file exist
+assert(os.path.exists(dir_stan_model+fname_stan_model+'.stan')),'Error. Unavailable regression option method'
 
 #define file output name
 fname_main_out = 'eas_f%.4fhz'%freq
 
 #output directory
 if flag_production:
-    dir_out = '../../../Data/gmm_ergodic/regression/'
-    if flag_mthread: dir_out = '../../../Data/gmm_ergodic/regression_mthread_test/'
+    dir_out  = '../../../Data/gmm_ergodic/regression'
+    dir_out += '_regionalized' if flag_regionalized else '_global'
+    dir_out += '_heteroscedastic' if flag_heteroscedastic else '_homoscedastic'
+    dir_out += '_mthread/' if flag_mthread else '/'
 else:
+    #main directory
     dir_out = '../../../Data/gmm_ergodic/verification/regression/' 
-    if flag_upd_saturation:
-        dir_out += 'updated_saturation/'
-    else:
-        dir_out += 'original_saturation/'
-    if not flag_heteroscedastic:
-        dir_out += 'homoscedastic'
-    else:
-        dir_out += 'heteroscedastic'
-    if flag_hangingwall:
-        dir_out += '_hangwall'
-    dir_out += '_rlz%i/'%verif_rlz 
+
+    #regionalization
+    dir_out += 'regional/' if flag_regionalized else 'global/'
+    #short-distance saturation
+    if   opt_saturation == 0: dir_out += 'original_saturation'
+    elif opt_saturation == 1: dir_out += 'updated-v1_saturation'
+    elif opt_saturation == 2: dir_out += 'updated-v2_saturation'
+    #style of faulting
+    dir_out += '_soffree' if flag_style_fault == 'free' else '_soffixed'   
+    #hanging wall    
+    if flag_hanging_wall == 'fixed': dir_out += '_hangwallfixed'
+    if flag_hanging_wall == 'free':  dir_out += '_hangwallfree'
+    #standard deviation model
+    dir_out += '_heteroscedastic'  if flag_heteroscedastic else '_homoscedastic'
+    #random realization
+    dir_out += '/rlz%i/'%verif_rlz 
 
 #figures output
 dir_fig = dir_out + 'figures/%s/'%fname_main_out
 
 
-#%% Read 
+#%% Read Data
 ### ======================================
 print("Regression frequency: %.5fhz"%freq)
+print("Input flatfile: %s"%fn_fltfile)
+print("Regression file: %s"%(fname_stan_model+'.stan'))
 
 #read flatfile
 df_flatfile = pd.read_csv(fn_fltfile)
@@ -234,13 +267,16 @@ if not reg2process == 'ALL':
 df_flatfile = df_flatfile.loc[~np.isnan(df_flatfile[n_y]),:]
 #apply rrup filter
 df_flatfile = df_flatfile.loc[df_flatfile.rrup <= rrup_max,:]
+#
+#df_flatfile = df_flatfile.loc[np.logical_or(df_flatfile.reg=="PW", df_flatfile.mag>4.),:]
 # #remove small events in Japan and Iran
 # df_flatfile = df_flatfile.loc[~np.logical_and(df_flatfile.country=='Japan', df_flatfile.mag<4.5),:]
 # df_flatfile = df_flatfile.loc[~np.logical_and(df_flatfile.country=='Iran',  df_flatfile.mag<4.5),:]
 #update indices
 df_flatfile.reset_index(drop=True, inplace=True)
+print("Regression size: ",len(df_flatfile))
 
-#read BA18 coefficients
+#read prior coefficients
 df_coeffs_prior = pd.read_csv(fn_coeffs_prior)
 
 
@@ -278,28 +314,58 @@ regeq_id = regeq_inv + 1
 _, regst_inv = np.unique(df_flatfile.loc[st_idx,['regid']].values, return_inverse=True)
 regst_id = regst_inv + 1
 
-#mean prior
-c1_prior   = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c1'].values[0]   + flag_prior_sens * np.random.normal(0,.5)
-c3_prior   = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c3'].values[0]   + flag_prior_sens * np.random.normal(0,.5)
-c4_prior   = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c4'].values[0]   + flag_prior_sens * np.random.normal(0,.2)
-c7_prior   = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c7'].values[0]   + flag_prior_sens * np.random.normal(0,.005)
-c8_prior   = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c8'].values[0]   + flag_prior_sens * np.random.normal(0,.4)
-c9_prior   = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c9'].values[0]   + flag_prior_sens * np.random.normal(0,.01)
-c10a_prior = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c10a'].values[0] + flag_prior_sens * np.random.normal(0,.05)
-c10b_prior = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c10b'].values[0] + flag_prior_sens * np.random.normal(0,.05)
-c13_prior  = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c13'].values[0]  + flag_prior_sens * np.random.normal(0,.1)
+#mean priors
+i_freq = np.argmin( np.abs(df_coeffs_prior.f.values - freq) )
+#median gmm
+c1_prior   = df_coeffs_prior.loc[i_freq,'c1']   + flag_prior_sens * np.random.normal(0,.5)
+c3_prior   = df_coeffs_prior.loc[i_freq,'c3']   + flag_prior_sens * np.random.normal(0,.5)
+c4_prior   = df_coeffs_prior.loc[i_freq,'c4']   + flag_prior_sens * np.random.normal(0,.2)
+c7_prior   = df_coeffs_prior.loc[i_freq,'c7']   + flag_prior_sens * np.random.normal(0,.005)
+c8_prior   = df_coeffs_prior.loc[i_freq,'c8']   + flag_prior_sens * np.random.normal(0,.4)
+c9_prior   = df_coeffs_prior.loc[i_freq,'c9']   + flag_prior_sens * np.random.normal(0,.01)
+#style of fault and hw scaling
+c10a_prior = df_coeffs_prior.loc[i_freq,'c10a']
+c10b_prior = df_coeffs_prior.loc[i_freq,'c10b']
+c13_prior  = df_coeffs_prior.loc[i_freq,'c13']
+if flag_prior_sens and flag_style_fault == 'free':
+    c10a_prior += np.random.normal(0,.05)
+    c10b_prior += np.random.normal(0,.05)
+if flag_prior_sens and flag_hanging_wall == 'free':
+    c13_prior  += np.random.normal(0,.1)
+#aleatory var
+s1_prior   = np.abs( df_coeffs_prior.loc[i_freq,'s1'] + flag_prior_sens * np.random.normal(0,.1) )
+s2_prior   = np.abs( df_coeffs_prior.loc[i_freq,'s2'] + flag_prior_sens * np.random.normal(0,.1) )
+s3_prior   = np.abs( df_coeffs_prior.loc[i_freq,'s3'] + flag_prior_sens * np.random.normal(0,.005) )
+s4_prior   = np.abs( df_coeffs_prior.loc[i_freq,'s4'] + flag_prior_sens * np.random.normal(0,.1) )
+s5_prior   = np.abs( df_coeffs_prior.loc[i_freq,'s5'] + flag_prior_sens * np.random.normal(0,.1) )
+s6_prior   = np.abs( df_coeffs_prior.loc[i_freq,'s6'] + flag_prior_sens * np.random.normal(0,.1) )
 #fixed coefficients
-c2_fxd    = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c2'].values[0]
-c5_fxd    = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c5'].values[0]
-c6_fxd    = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'c6'].values[0]
-cn_fxd    = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'cn'].values[0]
-chm_fxd   = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'chm'].values[0]
-cmag_fxd  = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'cM'].values[0]
-#magnitude breaks
-s1m = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'s1M'].values[0]
-s2m = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'s2M'].values[0]
-s5m = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'s5M'].values[0]
-s6m = df_coeffs_prior.loc[df_coeffs_prior.f == freq,'s6M'].values[0]
+c2_fxd    = df_coeffs_prior.loc[i_freq,'c2']
+if opt_saturation == 0 or opt_saturation == 1:
+    c5_fxd = df_coeffs_prior.loc[i_freq,'c5']
+    c6_fxd = df_coeffs_prior.loc[i_freq,'c6']
+    b1_fxd = -999.
+    b2_fxd = -999.
+    b3_fxd = -999.
+elif opt_saturation == 2:
+    c5_fxd = -999.
+    c6_fxd = -999.
+    b1_fxd = df_coeffs_prior.loc[i_freq,'b1']
+    b2_fxd = df_coeffs_prior.loc[i_freq,'b2']
+    b3_fxd = df_coeffs_prior.loc[i_freq,'b3']
+#magnitude and distance scaling magnitude break
+cn_fxd    = df_coeffs_prior.loc[i_freq,'cn']
+chm_fxd   = df_coeffs_prior.loc[i_freq,'chm']
+cmag_fxd  = df_coeffs_prior.loc[i_freq,'cM']
+#max depth rupture
+ztor_max = df_coeffs_prior.loc[i_freq,'ztor_max']
+#max finte fault adjustment
+h_max =  df_coeffs_prior.loc[i_freq,'h_max']
+#aleatory variability magnitude breaks
+s1m = df_coeffs_prior.loc[i_freq,'s1M']
+s2m = df_coeffs_prior.loc[i_freq,'s2M']
+s5m = df_coeffs_prior.loc[i_freq,'s5M']
+s6m = df_coeffs_prior.loc[i_freq,'s6M']
 #hanging wall terms
 h1_fxd   =  0.25
 h2_fxd   =  1.50
@@ -329,7 +395,7 @@ y = np.log(df_flatfile.loc[:,n_y].values)
 width[np.isnan(width)] = np.sqrt(10**(mag[np.isnan(width)] - 4.))
 ztor[np.isnan(ztor)]   = 20.
 #default path parameters
-rx[np.isnan(rx)]   = rjb[np.isnan(rjb)]/np.sqrt(2.)
+rx[np.isnan(rx)]   = rjb[np.isnan(rx)]/np.sqrt(2.)
 ry[np.isnan(ry)]   = np.sqrt(np.maximum(rrup[np.isnan(ry)]**2 - rx[np.isnan(ry)]**2, 0.))
 ry0[np.isnan(ry0)] = np.sqrt(np.maximum(rjb[np.isnan(ry0)]**2 - rx[np.isnan(ry0)]**2, 0.))
 ry[np.isnan(ry)]   = 0.
@@ -361,26 +427,26 @@ pathlib.Path(dir_stan_cmpl).mkdir(parents=True, exist_ok=True)
 # regression input data
 # ---   ---   ---   ---
 #prepare regression data
-stan_data = {'N':           n_gm,
-             'NEQ':         n_eq,
-             'NST':         n_st,
-             'NREG':        n_reg,
-             'eq':          eq_id,                  #earthquake id
-             'st':          st_id,                  #station id
-             'reg':         reg_id.flatten(),
-             'regeq':       regeq_id.flatten(),
-             'regst':       regst_id.flatten(),
-             'mag':         mag[eq_idx],
-             'ztor':        ztor[eq_idx],
-             'sof':         sof[eq_idx],
-             'dip':         dip[eq_idx],
-             'width':       width[eq_idx],
-             'rrup':        rrup,
-             'rx':          rx,
-             'ry':          ry,
-             'ry0':         ry0,
-             'vs30':        vs30[st_idx],
-             'Y':           y,
+stan_data = {'N':               n_gm,
+             'NEQ':             n_eq,
+             'NST':             n_st,
+             'NREG':            n_reg,
+             'eq':              eq_id,                  #earthquake id
+             'st':              st_id,                  #station id
+             'reg':             reg_id.flatten(),
+             'regeq':           regeq_id.flatten(),
+             'regst':           regst_id.flatten(),
+             'mag':             mag[eq_idx],
+             'ztor':            ztor[eq_idx],
+             'sof':             sof[eq_idx],
+             'dip':             dip[eq_idx],
+             'width':           width[eq_idx],
+             'rrup':            rrup,
+             'rx':              rx,
+             'ry':              ry,
+             'ry0':             ry0,
+             'vs30':            vs30[st_idx],
+             'Y':                y,
              #coefficient prior
              'c_1mu':            c1_prior,
              'c_3mu':            c3_prior,
@@ -391,16 +457,28 @@ stan_data = {'N':           n_gm,
              'c_10amu':          c10a_prior,
              'c_10bmu':          c10b_prior,
              'c_13mu':           c13_prior,
+             #aleatory prior
+             's_1mu':            s1_prior,
+             's_2mu':            s2_prior,
+             's_3mu':            s3_prior,
+             's_4mu':            s4_prior,
+             's_5mu':            s5_prior,
+             's_6mu':            s6_prior,                 
              #short distance saturation
              'c_2fxd':           c2_fxd,
              'c_5fxd':           c5_fxd,
              'c_6fxd':           c6_fxd,
+             'b_1fxd':           b1_fxd,
+             'b_2fxd':           b2_fxd,
+             'b_3fxd':           b3_fxd,
              #mag break
              'c_nfxd':           cn_fxd,
              'c_hmfxd':          chm_fxd,
              'c_magfxd':         cmag_fxd,
              #maximum top of rupture
              'ztor_max':         ztor_max,
+             #maximum finite-fault effect
+             'h_max':            h_max,
              #hanging wall terms
              'a_2hwfxd':         a2hw_fxd,
              'h_1fxd':           h1_fxd,
@@ -428,6 +506,7 @@ except AttributeError:
 
 # run stan
 # ---   ---   ---   ---
+print("Regression script: %s"%fname_stan_model)
 if not os.path.isfile(dir_stan_cmpl+fname_stan_model):
     #copy regression file to compilation folder
     shutil.copy(dir_stan_model+fname_stan_model+'.stan', dir_stan_cmpl+fname_stan_model+'.stan')
@@ -509,6 +588,9 @@ if flag_mcmc:
     #regional coefficients
     # c1r_full, c7r_full, c8r_full = [stan_fit.stan_variable(c) for c in ['c_1r','c_7r','c_8r']]
     c1r_full, c3r_full, c7r_full, c8r_full = [stan_fit.stan_variable(c) for c in ['c_1r','c_3r','c_7r','c_8r']]
+    #short distance saturation
+    if opt_saturation == 2:
+        b1_full, b2_full, b3_full = [stan_fit.stan_variable(c) for c in ['b_1','b_2','b_3']]
     #magnitude transition
     cn_full, chm_full, cmag_full = [stan_fit.stan_variable(s) for s in ['c_n','c_hm','c_mag']]
     #aleatory variability
@@ -558,6 +640,11 @@ if flag_mcmc:
     cn_mu,   cn_med,   cn_sd,   cn_q   = get_posterior(cn_full)
     chm_mu,  chm_med,  chm_sd,  chm_q  = get_posterior(chm_full)
     cmag_mu, cmag_med, cmag_sd, cmag_q = get_posterior(cmag_full)
+    #short-distance saturation
+    if opt_saturation == 2:
+        b1_mu,   b1_med,   b1_sd,   b1_q   = get_posterior(b1_full)
+        b2_mu,   b2_med,   b2_sd,   b2_q   = get_posterior(b2_full)
+        b3_mu,   b3_med,   b3_sd,   b3_q   = get_posterior(b3_full)
     #aleatory variability
     s1_mu,   s1_med,   s1_sd,   s1_q   = get_posterior(s1_full)
     s2_mu,   s2_med,   s2_sd,   s2_q   = get_posterior(s2_full)
@@ -593,6 +680,9 @@ else:
     #regional terms
     # c1r_mu, c7r_mu, c8r_mu = [stan_fit.stan_variable(c) for c in ['c_1r','c_7r','c_8r']]
     c1r_mu, c7r_mu, c8r_mu = [stan_fit.stan_variable(c) for c in ['c_1r','c_7r','c_8r']]
+    #short distance saturation
+    if opt_saturation == 2:
+        b1_mu, b2_mu, b3_mu = [stan_fit.stan_variable(c) for c in ['b_1','b_2','b_3']]
     #magnitude transition
     cn_mu, chm_mu, cmag_mu = [stan_fit.stan_variable(s) for s in ['c_n','c_hm','c_mag']]
     #aleatory variability
@@ -621,7 +711,7 @@ else:
 # - - - - - - - - - - - 
 #mean
 # -  -  -  -  -  -  - 
-#constant terms
+#global terms
 df_gmm_mu = pd.DataFrame({'c1':c1_mu,'c2':c2_mu,'c3':c3_mu,'c4':c4_mu,'c5':c5_mu,
                           'c6':c6_mu,'c7':c7_mu,'c8':c8_mu,'c9':c9_mu,
                           'c10a':c10a_mu,'c10b':c10b_mu,'c11':c11_mu,'c13':c13_mu},
@@ -633,6 +723,9 @@ df_gmm_mu.loc[reg,'c1'] = c1r_mu
 df_gmm_mu.loc[reg,'c3'] = c3r_mu
 df_gmm_mu.loc[reg,'c7'] = c7r_mu
 df_gmm_mu.loc[reg,'c8'] = c8r_mu
+#short-distance saturation
+if opt_saturation == 2:
+    df_gmm_mu = pd.concat([df_gmm_mu, pd.DataFrame({'b1':b1_mu,'b2':b2_mu,'b3':b3_mu}, index=['GLOBAL'])], axis=1)
 #magnitude scaling
 df_gmm_mu = pd.concat([df_gmm_mu, pd.DataFrame({'cn':cn_mu,'chm':chm_mu,'cmag':cmag_mu}, index=['GLOBAL'])], axis=1)
 #aleatory variability
@@ -649,11 +742,17 @@ df_gmm_mu.loc[reg,'s5'] = s5r_mu
 df_gmm_mu.loc[reg,'s6'] = s6r_mu
 
 #re-organize columns
-df_gmm_mu = df_gmm_mu.loc[:,['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10a','c10b','c11','c13',
-                             'cn','chm','cmag',
-                             's1','s2','s3','s4','s5','s6',
-                             's1mag','s2mag','s5mag','s6mag']]
-
+if opt_saturation == 0 or opt_saturation == 1:
+    df_gmm_mu = df_gmm_mu.loc[:,['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10a','c10b','c11','c13',
+                                 'cn','chm','cmag',
+                                 's1','s2','s3','s4','s5','s6',
+                                 's1mag','s2mag','s5mag','s6mag']]
+elif opt_saturation == 2:
+    df_gmm_mu = df_gmm_mu.loc[:,['c1','c2','c3','c4','c7','c8','c9','c10a','c10b','c11','c13',
+                                 'b1','b2','b3',
+                                 'cn','chm','cmag',
+                                 's1','s2','s3','s4','s5','s6',
+                                 's1mag','s2mag','s5mag','s6mag']]
 #median
 # -  -  -  -  -  -  - 
 if flag_mcmc:
@@ -669,6 +768,9 @@ if flag_mcmc:
     df_gmm_med.loc[reg,'c3'] = c3r_med
     df_gmm_med.loc[reg,'c7'] = c7r_med
     df_gmm_med.loc[reg,'c8'] = c8r_med
+    #short-distance saturation
+    if opt_saturation == 2:
+        df_gmm_med = pd.concat([df_gmm_med, pd.DataFrame({'b1':b1_med,'b2':b2_med,'b3':b3_med}, index=['GLOBAL'])], axis=1)
     #magnitude scaling
     df_gmm_med = pd.concat([df_gmm_med, pd.DataFrame({'cn':cn_med,'chm':chm_med,'cmag':cmag_med}, index=['GLOBAL'])], axis=1)
     #aleatory variability
@@ -685,15 +787,22 @@ if flag_mcmc:
     df_gmm_med.loc[reg,'s6'] = s6r_med
 
     #re-organize columns
-    df_gmm_med = df_gmm_med.loc[:,['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10a','c10b','c11','c13',
-                                   'cn','chm','cmag',
-                                   's1','s2','s3','s4','s5','s6',
-                                   's1mag','s2mag','s5mag','s6mag']]
-    
+    if opt_saturation == 0 or opt_saturation == 1:
+        df_gmm_med = df_gmm_med.loc[:,['c1','c2','c3','c4','c5','c6','c7','c8','c9','c10a','c10b','c11','c13',
+                                       'cn','chm','cmag',
+                                       's1','s2','s3','s4','s5','s6',
+                                       's1mag','s2mag','s5mag','s6mag']]
+    elif opt_saturation == 2:
+        df_gmm_med = df_gmm_med.loc[:,['c1','c2','c3','c4','c7','c8','c9','c10a','c10b','c11','c13',
+                                      'b1','b2','b3',
+                                      'cn','chm','cmag',
+                                      's1','s2','s3','s4','s5','s6',
+                                      's1mag','s2mag','s5mag','s6mag']]
+
 # GMM prediction
 # - - - - - - - - - - -
 #mean
-if not flag_upd_saturation:
+if opt_saturation == 0:
     f_mu, f_src_mu, f_path_mu, f_site_mu, tau_mu, tauP_mu, phiS_mu, phi_mu = gmm_eas(mag, ztor, sof, rrup, vs30, z1p0, 
                                                                                      reg=df_flatfile['reg'].values,
                                                                                      regions=reg,
@@ -704,26 +813,38 @@ if not flag_upd_saturation:
                                                                                      cn=cn_mu, cmag=cmag_mu, chm=chm_mu, ztor_max=ztor_max,
                                                                                      s1=s1r_mu, s2=s2_mu, s3=s3r_mu, s4=s4r_mu, s5=s5r_mu, s6=s6r_mu,
                                                                                      s1mag=s1m, s2mag=s2m, s5mag=s5m, s6mag=s6m)
-else:
-    f_mu, f_src_mu, f_path_mu, f_site_mu, tau_mu, tauP_mu, phiS_mu, phi_mu = gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, 
-                                                                                         reg=df_flatfile['reg'].values,
-                                                                                         regions=reg,
-                                                                                         c1=c1r_mu, c2=c2_mu, c3=c3r_mu, c4=c4_mu, 
-                                                                                         c5=c5_mu, c6=c6_mu, c7=c7r_mu, c8=c8r_mu, c9=c9_mu,
-                                                                                         c10a=c10a_mu, c10b=c10b_mu, 
-                                                                                         c11=c11_mu, z1p0_vs30_brk=[],
-                                                                                         cn=cn_mu, cmag=cmag_mu, chm=chm_mu, ztor_max=ztor_max,
-                                                                                         s1=s1r_mu, s2=s2_mu, s3=s3r_mu, s4=s4r_mu, s5=s5r_mu, s6=s6r_mu,
-                                                                                         s1mag=s1m, s2mag=s2m, s5mag=s5m, s6mag=s6m)   
+elif opt_saturation == 1:
+    f_mu, f_src_mu, f_path_mu, f_site_mu, tau_mu, tauP_mu, phiS_mu, phi_mu = gmm_eas_updv1(mag, ztor, sof, rrup, vs30, z1p0, 
+                                                                                           reg=df_flatfile['reg'].values,
+                                                                                           regions=reg,
+                                                                                           c1=c1r_mu, c2=c2_mu, c3=c3r_mu, c4=c4_mu, 
+                                                                                           c5=c5_mu, c6=c6_mu, c7=c7r_mu, c8=c8r_mu, c9=c9_mu,
+                                                                                           c10a=c10a_mu, c10b=c10b_mu, 
+                                                                                           c11=c11_mu, z1p0_vs30_brk=[],
+                                                                                           cn=cn_mu, cmag=cmag_mu, chm=chm_mu, ztor_max=ztor_max,
+                                                                                           s1=s1r_mu, s2=s2_mu, s3=s3r_mu, s4=s4r_mu, s5=s5r_mu, s6=s6r_mu,
+                                                                                           s1mag=s1m, s2mag=s2m, s5mag=s5m, s6mag=s6m)   
+elif opt_saturation == 2:
+    f_mu, f_src_mu, f_path_mu, f_site_mu, tau_mu, tauP_mu, phiS_mu, phi_mu = gmm_eas_updv2(mag, ztor, sof, rrup, vs30, z1p0, 
+                                                                                           reg=df_flatfile['reg'].values,
+                                                                                           regions=reg,
+                                                                                           c1=c1r_mu, c2=c2_mu, c3=c3r_mu, c4=c4_mu, 
+                                                                                           c7=c7r_mu, c8=c8r_mu, c9=c9_mu,
+                                                                                           c10a=c10a_mu, c10b=c10b_mu, 
+                                                                                           c11=c11_mu, z1p0_vs30_brk=[],
+                                                                                           b1=b1_mu, b2=b2_mu, b3=b3_mu,
+                                                                                           cn=cn_mu, cmag=cmag_mu, chm=chm_mu, ztor_max=ztor_max,
+                                                                                           s1=s1r_mu, s2=s2_mu, s3=s3r_mu, s4=s4r_mu, s5=s5r_mu, s6=s6r_mu,
+                                                                                           s1mag=s1m, s2mag=s2m, s5mag=s5m, s6mag=s6m)   
 
 #hanging wall
-if flag_hangingwall:
+if flag_hanging_wall:
     fhw_mu = c13_mu * scaling_hw(mag, width, dip, ztor, rjb, rrup, rx, ry0)
     fgmm_mu   += fhw_mu
 
 #median
 if flag_mcmc:
-    if not flag_upd_saturation:
+    if opt_saturation == 0:
         f_med, f_src_med, f_path_med, f_site_med, tau_med, tauP_med, phiS_med, phi_med = gmm_eas(mag, ztor, sof, rrup, vs30, z1p0, 
                                                                                                  reg=df_flatfile['reg'].values,
                                                                                                  regions=reg,
@@ -734,20 +855,32 @@ if flag_mcmc:
                                                                                                  cn=cn_med, cmag=cmag_med, chm=chm_med, ztor_max=ztor_max,
                                                                                                  s1=s1r_med, s2=s2_med, s3=s3r_med, s4=s4r_med, s5=s5r_med, s6=s6r_med,
                                                                                                              s1mag=s1m, s2mag=s2m, s5mag=s5m, s6mag=s6m)
-    else:
-        f_med, f_src_med, f_path_med, f_site_med, tau_med, tauP_med, phiS_med, phi_med = gmm_eas_upd(mag, ztor, sof, rrup, vs30, z1p0, 
-                                                                                                     reg=df_flatfile['reg'].values,
-                                                                                                     regions=reg,
-                                                                                                     c1=c1r_med, c2=c2_med, c3=c3r_med, c4=c4_med, 
-                                                                                                     c5=c5_med, c6=c6_med, c7=c7r_med, c8=c8r_med, c9=c9_med,
-                                                                                                     c10a=c10a_med, c10b=c10b_med, 
-                                                                                                     c11=c11_med, z1p0_vs30_brk=[],
-                                                                                                     cn=cn_med, cmag=cmag_med, chm=chm_med, ztor_max=ztor_max,
-                                                                                                     s1=s1r_med, s2=s2_med, s3=s3r_med, s4=s4r_med, s5=s5r_med, s6=s6r_med,
-                                                                                                     s1mag=s1m, s2mag=s2m, s5mag=s5m, s6mag=s6m)
-
+    if opt_saturation == 1:
+        f_med, f_src_med, f_path_med, f_site_med, tau_med, tauP_med, phiS_med, phi_med = gmm_eas_updv1(mag, ztor, sof, rrup, vs30, z1p0, 
+                                                                                                       reg=df_flatfile['reg'].values,
+                                                                                                       regions=reg,
+                                                                                                       c1=c1r_med, c2=c2_med, c3=c3r_med, c4=c4_med, 
+                                                                                                       c5=c5_med, c6=c6_med, c7=c7r_med, c8=c8r_med, c9=c9_med,
+                                                                                                       c10a=c10a_med, c10b=c10b_med, 
+                                                                                                       c11=c11_med, z1p0_vs30_brk=[],
+                                                                                                       cn=cn_med, cmag=cmag_med, chm=chm_med, ztor_max=ztor_max,
+                                                                                                       s1=s1r_med, s2=s2_med, s3=s3r_med, s4=s4r_med, s5=s5r_med, s6=s6r_med,
+                                                                                                       s1mag=s1m, s2mag=s2m, s5mag=s5m, s6mag=s6m)
+    if opt_saturation == 2:
+        f_med, f_src_med, f_path_med, f_site_med, tau_med, tauP_med, phiS_med, phi_med = gmm_eas_updv2(mag, ztor, sof, rrup, vs30, z1p0, 
+                                                                                                       reg=df_flatfile['reg'].values,
+                                                                                                       regions=reg,
+                                                                                                       c1=c1r_med, c2=c2_med, c3=c3r_med, c4=c4_med, 
+                                                                                                       c7=c7r_med, c8=c8r_med, c9=c9_med,
+                                                                                                       c10a=c10a_med, c10b=c10b_med, 
+                                                                                                       c11=c11_med, z1p0_vs30_brk=[],
+                                                                                                       b1=b1_med, b2=b2_med, b3=b3_med,
+                                                                                                       cn=cn_med, cmag=cmag_med, chm=chm_med, ztor_max=ztor_max,
+                                                                                                       s1=s1r_med, s2=s2_med, s3=s3r_med, s4=s4r_med, s5=s5r_med, s6=s6r_med,
+                                                                                                       s1mag=s1m, s2mag=s2m, s5mag=s5m, s6mag=s6m)
+        
     #hanging wall
-    if flag_hangingwall:
+    if flag_hanging_wall:
         fhw_med = c13_med * scaling_hw(mag, width, dip, ztor, rjb, rrup, rx, ry0)
         f_med   += fhw_med
 
@@ -825,19 +958,19 @@ df_predict_summary_st.to_csv(dir_out + fname_df + '.csv', index=False)
 
 #report regression fit
 print("**********************************")
-print("Regression, Mean:   total residuals:              (%.3f, %.3f)"%(np.mean(deltaT_mu),np.std(deltaT_mu)))
-if flag_mcmc: print("Regression, Median: total residuals:              (%.3f, %.3f)"%(np.mean(deltaT_med),np.std(deltaT_med)))
-print("Regression, Mean:   between-event residuals:      (%.3f, %.3f)"%(np.mean(deltaB_mu),np.std(deltaB_mu)))
-if flag_mcmc: print("Regression, Median: between-event residuals:      (%.3f, %.3f)"%(np.mean(deltaB_med),np.std(deltaB_med)))
-print("Regression, Mean:   between-event-path residuals: (%.3f, %.3f)"%(np.mean(deltaBP_mu),np.std(deltaBP_mu)))
-if flag_mcmc: print("Regression, Median: between-event-path residuals: (%.3f, %.3f)"%(np.mean(deltaBP_med),np.std(deltaBP_med)))
-print("Regression, Mean:   between-site residuals:       (%.3f, %.3f)"%(np.mean(deltaS_mu),np.std(deltaS_mu)))
-if flag_mcmc: print("Regression, Median: between-site residuals:       (%.3f, %.3f)"%(np.mean(deltaS_med),np.std(deltaS_med)))
-print("Regression, Mean:   within-event-site residuals:  (%.3f, %.3f)"%(np.mean(deltaWS_mu),np.std(deltaWS_mu)))
-if flag_mcmc: print("Regression, Median: within-event-site residuals:  (%.3f, %.3f)"%(np.mean(deltaWS_med),np.std(deltaWS_med)))
+print("Regression, Mean:   total residuals:              (%.3f, %.3f, %.3f)"%(np.mean(deltaT_mu), np.std(deltaT_mu), np.sqrt(np.mean(deltaT_mu**2)) ))
+if flag_mcmc: print("Regression, Median: total residuals:              (%.3f, %.3f, %.3f)"%(np.mean(deltaT_med), np.std(deltaT_med), np.sqrt(np.mean(deltaT_med**2)) ))
+print("Regression, Mean:   between-event residuals:      (%.3f, %.3f, %.3f)"%(np.mean(deltaB_mu), np.std(deltaB_mu), np.sqrt(np.mean(deltaB_mu**2)) ))
+if flag_mcmc: print("Regression, Median: between-event residuals:      (%.3f, %.3f, %.3f)"%(np.mean(deltaB_med), np.std(deltaB_med), np.sqrt(np.mean(deltaB_med**2)) ))
+print("Regression, Mean:   between-event-path residuals: (%.3f, %.3f, %.3f)"%(np.mean(deltaBP_mu), np.std(deltaBP_mu), np.sqrt(np.mean(deltaBP_mu**2)) ))
+if flag_mcmc: print("Regression, Median: between-event-path residuals: (%.3f, %.3f, %.3f)"%(np.mean(deltaBP_med), np.std(deltaBP_med), np.sqrt(np.mean(deltaBP_med**2)) ))
+print("Regression, Mean:   between-site residuals:       (%.3f, %.3f, %.3f)"%(np.mean(deltaS_mu), np.std(deltaS_mu), np.sqrt(np.mean(deltaS_mu**2)) ))
+if flag_mcmc: print("Regression, Median: between-site residuals:       (%.3f, %.3f, %.3f)"%(np.mean(deltaS_med), np.std(deltaS_med), np.sqrt(np.mean(deltaS_med**2)) ))
+print("Regression, Mean:   within-event-site residuals:  (%.3f, %.3f, %.3f)"%(np.mean(deltaWS_mu), np.std(deltaWS_mu), np.sqrt(np.mean(deltaWS_mu**2)) ))
+if flag_mcmc: print("Regression, Median: within-event-site residuals:  (%.3f, %.3f, %.3f)"%(np.mean(deltaWS_med), np.std(deltaWS_med), np.sqrt(np.mean(deltaWS_med**2)) ))
 print("----------------------------------")
-print("Estimate, Mean:   total residuals:                (%.3f, %.3f)"%(np.mean(dT_mu),np.std(dT_mu)))
-if flag_mcmc: print("Estimate, Median: total residuals:                (%.3f, %.3f)"%(np.mean(dT_med),np.std(dT_med)))
+print("Estimate, Mean:   total residuals:                (%.3f, %.3f, %.3f)"%(np.mean(dT_mu), np.std(dT_mu), np.sqrt(np.mean(dT_mu**2)) ))
+if flag_mcmc: print("Estimate, Median: total residuals:                (%.3f, %.3f, %.3f)"%(np.mean(dT_med), np.std(dT_med), np.sqrt(np.mean(dT_med**2)) ))
     
 #%% Plotting
 ### ======================================
